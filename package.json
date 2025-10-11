@@ -1,0 +1,26 @@
+{
+  "name": "yt-music-playlist-ext",
+  "version": "1.0.0",
+  "description": "YouTube Musicの登録チャンネルから最新の楽曲を自動取得してプレイリストにまとめるChrome拡張機能",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "echo \"No build process needed for this extension\"",
+    "lint": "eslint *.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "youtube-music",
+    "playlist",
+    "automation"
+  ],
+  "author": "charge0315",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/charge0315/yt-music-playlist-ext.git"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}

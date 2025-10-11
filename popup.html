@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Music Playlist Extension</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>YT Music Playlist</h1>
+
+    <div class="mode-selection">
+      <label>取得モード:</label>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="fetchMode" value="latest" checked>
+          <span>最新曲</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="fetchMode" value="popular">
+          <span>人気曲</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings">
+      <label for="songsPerChannel">各チャンネルから取得する曲数:</label>
+      <input type="number" id="songsPerChannel" min="1" max="10" value="3">
+    </div>
+
+    <div class="playlist-name">
+      <label for="playlistName">プレイリスト名:</label>
+      <input type="text" id="playlistName" placeholder="自動生成プレイリスト" value="Latest from Subscriptions">
+    </div>
+
+    <button id="fetchSongs" class="btn-primary">
+      登録チャンネルから楽曲を取得
+    </button>
+
+    <div id="status" class="status hidden"></div>
+
+    <div id="progress" class="progress hidden">
+      <div class="progress-bar">
+        <div id="progressBar" class="progress-fill"></div>
+      </div>
+      <p id="progressText"></p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <h3>取得結果</h3>
+      <ul id="resultList"></ul>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

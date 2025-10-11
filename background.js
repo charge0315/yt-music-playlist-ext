@@ -1,0 +1,33 @@
+// バックグラウンドサービスワーカー
+
+// インストール時の処理
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('YouTube Music Playlist Extension installed');
+
+  // デフォルト設定を保存
+  chrome.storage.sync.set({
+    songsPerChannel: 3,
+    playlistName: 'Latest from Subscriptions'
+  });
+});
+
+// メッセージリスナー
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'log') {
+    console.log('[Content Script]:', request.message);
+  }
+
+  if (request.action === 'error') {
+    console.error('[Content Script Error]:', request.message);
+  }
+
+  return true;
+});
+
+// タブの更新を監視（オプション：将来的な自動実行用）
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes('music.youtube.com')) {
+    // YouTube Musicページが読み込まれた時の処理
+    console.log('YouTube Music page loaded');
+  }
+});

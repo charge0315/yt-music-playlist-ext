@@ -3,6 +3,8 @@
 YouTube Musicの登録チャンネルから楽曲を自動収集し、プレイリストにまとめるChrome拡張機能
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/charge0315/yt-music-playlist-ext/workflows/CI/badge.svg)](https://github.com/charge0315/yt-music-playlist-ext/actions)
+[![Version](https://img.shields.io/github/v/release/charge0315/yt-music-playlist-ext)](https://github.com/charge0315/yt-music-playlist-ext/releases)
 
 ## 目次
 
@@ -103,6 +105,152 @@ cd yt-music-playlist-ext
 - 拡張機能リストに「YouTube Music Playlist Extension」が表示されます
 
 ## 使い方
+
+### 基本的な使い方
+
+1. **YouTube Musicを開く**
+   - https://music.youtube.com にアクセス
+   - ログインしていることを確認
+
+2. **拡張機能のアイコンをクリック**
+   - ブラウザのツールバーに表示されるアイコンをクリック
+
+3. **設定を調整**
+   - **取得モード**: 最新曲 or 人気曲
+   - **各チャンネルから取得する曲数**: 1〜10曲
+   - **プレイリスト名**: お好みの名前を入力
+
+4. **「登録チャンネルから楽曲を取得」をクリック**
+   - 処理が開始され、進捗が表示されます
+   - 完了すると、取得した楽曲のリストが表示されます
+
+5. **YouTube Musicでプレイリストを確認**
+   - ライブラリ → プレイリスト から確認できます
+
+### ヒント
+- 既存のプレイリスト名を指定すると、そのプレイリストに曲が追加されます
+- 定期的に実行することで、最新の楽曲をキャッチアップできます
+- 人気曲モードは、初めて聴くアーティストの「入門編」として最適です
+
+---
+
+## 📁 プロジェクト構造
+
+```
+yt-music-playlist-ext/
+├── .github/
+│   ├── workflows/          # GitHub Actions CI/CD
+│   ├── ISSUE_TEMPLATE/     # Issueテンプレート
+│   └── PULL_REQUEST_TEMPLATE.md
+├── src/
+│   ├── background/         # バックグラウンドスクリプト
+│   ├── content/            # コンテンツスクリプト
+│   ├── popup/              # ポップアップUI
+│   └── utils/              # ユーティリティ
+│       ├── constants.js    # 定数定義
+│       ├── helpers.js      # ヘルパー関数
+│       └── types.js        # 型定義 (JSDoc)
+├── tests/                  # テストファイル
+├── scripts/                # ビルドスクリプト
+├── docs/                   # ドキュメント
+├── icons/                  # 拡張機能アイコン
+├── manifest.json           # 拡張機能マニフェスト
+├── package.json            # npm設定
+├── jest.config.js          # Jest設定
+├── .eslintrc.js            # ESLint設定
+├── .prettierrc             # Prettier設定
+├── CONTRIBUTING.md         # 貢献ガイド
+├── CHANGELOG.md            # 変更履歴
+├── SECURITY.md             # セキュリティポリシー
+└── README.md
+```
+
+---
+
+## 🛠️ 開発
+
+### セットアップ
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/charge0315/yt-music-playlist-ext.git
+cd yt-music-playlist-ext
+
+# 依存関係のインストール
+npm install
+```
+
+### 開発コマンド
+
+```bash
+# コードのリント
+npm run lint
+
+# リントエラーを自動修正
+npm run lint:fix
+
+# コードフォーマット
+npm run format
+
+# フォーマットチェック
+npm run format:check
+
+# テストの実行
+npm test
+
+# テスト (watch モード)
+npm run test:watch
+
+# カバレッジ付きテスト
+npm run test:coverage
+
+# ビルド
+npm run build
+
+# Zipアーカイブの作成
+npm run build:zip
+
+# 開発用ウォッチモード
+npm run watch
+```
+
+### デバッグ
+
+1. **VSCodeを使用する場合**
+   - F5 キーを押すと Chrome が起動します
+   - ブレークポイントを設定してデバッグできます
+
+2. **Chrome Developer Toolsを使用する場合**
+   - Popup: アイコンを右クリック → 「検証」
+   - Background: `chrome://extensions/` → 「service worker」をクリック
+   - Content Script: YouTube Musicページで開発者ツールを開く
+
+---
+
+## 🧪 テスト
+
+このプロジェクトは Jest を使用してテストを実行しています。
+
+```bash
+# すべてのテストを実行
+npm test
+
+# カバレッジレポート生成
+npm run test:coverage
+```
+
+テストファイルは `tests/` ディレクトリに配置されています。
+
+---
+
+## 📖 ドキュメント
+
+- [API Documentation](docs/API.md) - 内部API仕様とアーキテクチャ
+- [Contributing Guide](CONTRIBUTING.md) - 貢献方法
+- [Security Policy](SECURITY.md) - セキュリティポリシー
+- [Changelog](CHANGELOG.md) - 変更履歴
+
+---
 
 ### 基本的な使い方
 
@@ -305,16 +453,14 @@ Result (Popup に表示)
 3. YouTube Musicのページをリロード
 4. 問題が続く場合は、拡張機能を削除して再インストール
 
-## 開発
-
-開発者向けの詳細情報は [DEVELOPMENT.md](DEVELOPMENT.md) を参照してください。
+## 🛠️ 開発
 
 ### 必要な環境
 
-- Node.js (推奨: v18以上)
-- npm または yarn
-- Google Chrome
-- Git
+- **Node.js**: v18以上を推奨
+- **npm**: v9以上
+- **Google Chrome**: 最新版
+- **Git**: バージョン管理用
 
 ### セットアップ
 
@@ -323,33 +469,189 @@ Result (Popup に表示)
 git clone https://github.com/charge0315/yt-music-playlist-ext.git
 cd yt-music-playlist-ext
 
-# 依存関係をインストール（開発ツール用）
+# 依存関係をインストール
 npm install
+```
+
+### 開発コマンド
+
+```bash
+# コードのリント
+npm run lint
+
+# リントエラーを自動修正
+npm run lint:fix
+
+# コードフォーマット
+npm run format
+
+# フォーマットチェック
+npm run format:check
+
+# テストの実行
+npm test
+
+# テスト (watch モード)
+npm run test:watch
+
+# カバレッジ付きテスト
+npm run test:coverage
+
+# ビルド
+npm run build
+
+# Zipアーカイブの作成（リリース用）
+npm run build:zip
+
+# 開発用ウォッチモード（ファイル変更を監視して自動ビルド）
+npm run watch
 ```
 
 ### デバッグ
 
-1. **Content Scriptのログを確認**
-   - YouTube MusicページでF12を押して開発者ツールを開く
-   - Consoleタブを確認
+#### 1. VSCodeを使用する場合
 
-2. **Background Scriptのログを確認**
-   - `chrome://extensions/` を開く
-   - 「サービスワーカー」のリンクをクリック
+プロジェクトには `.vscode/launch.json` が含まれています。
 
-3. **ネットワークリクエストを監視**
-   - 開発者ツールのNetworkタブを開く
-   - Filter: `youtubei` で絞り込み
+- **F5** キーを押すと Chrome が起動します
+- ブレークポイントを設定してデバッグできます
+- テストのデバッグも可能です
+
+#### 2. Chrome Developer Toolsを使用する場合
+
+- **Popup**: アイコンを右クリック → 「検証」
+- **Background Script**: `chrome://extensions/` → 「service worker」をクリック
+- **Content Script**: YouTube Musicページで F12 を押して開発者ツールを開く
+
+#### 3. ネットワークリクエストの監視
+
+- 開発者ツールの **Network** タブを開く
+- Filter: `youtubei` で YouTube Music API を絞り込み
+- リクエスト/レスポンスの内容を確認
+
+### テスト
+
+このプロジェクトは **Jest** を使用してテストを実行しています。
+
+```bash
+# すべてのテストを実行
+npm test
+
+# カバレッジレポート生成
+npm run test:coverage
+
+# 特定のテストファイルを実行
+npm test -- helpers.test.js
+```
+
+テストファイルは `tests/` ディレクトリに配置されています。
+
+**テスト結果の例:**
+```
+Test Suites: 1 passed, 1 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        0.662 s
+```
 
 ### コントリビュート
 
-プルリクエストを歓迎します！
+プルリクエストを歓迎します！ 🎉
 
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
+貢献方法の詳細は [CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。
+
+**基本的な流れ:**
+
+1. このリポジトリを **フォーク**
+2. フィーチャーブランチを作成
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+3. 変更を加えてコミット
+   ```bash
+   git commit -m "feat: Add amazing feature"
+   ```
+4. ブランチにプッシュ
+   ```bash
+   git push origin feature/amazing-feature
+   ```
+5. **プルリクエスト** を作成
+
+**コミットメッセージ規約:**
+- `feat:` 新機能
+- `fix:` バグ修正
+- `docs:` ドキュメント
+- `style:` フォーマット
+- `refactor:` リファクタリング
+- `test:` テスト
+- `chore:` その他
+
+### ドキュメント
+
+- 📖 [API Documentation](docs/API.md) - 内部API仕様とアーキテクチャ
+- 🤝 [Contributing Guide](CONTRIBUTING.md) - 貢献ガイドライン
+- 🔒 [Security Policy](SECURITY.md) - セキュリティポリシー
+- 📝 [Changelog](CHANGELOG.md) - 変更履歴
+- 🚀 [Development Guide](DEVELOPMENT.md) - 開発者向け詳細ドキュメント
+
+### プロジェクト構造
+
+```
+yt-music-playlist-ext/
+├── .github/                    # GitHub設定
+│   ├── workflows/              # CI/CD (GitHub Actions)
+│   │   ├── ci.yml              # 継続的インテグレーション
+│   │   └── release.yml         # リリース自動化
+│   ├── ISSUE_TEMPLATE/         # Issueテンプレート
+│   └── PULL_REQUEST_TEMPLATE.md
+├── .vscode/                    # VSCode設定
+│   ├── settings.json           # エディタ設定
+│   ├── launch.json             # デバッグ設定
+│   └── extensions.json         # 推奨拡張機能
+├── src/                        # ソースコード
+│   ├── background/             # バックグラウンドスクリプト
+│   ├── content/                # コンテンツスクリプト
+│   ├── popup/                  # ポップアップUI
+│   └── utils/                  # ユーティリティ
+│       ├── constants.js        # 定数定義
+│       ├── helpers.js          # ヘルパー関数
+│       └── types.js            # 型定義 (JSDoc)
+├── tests/                      # テストファイル
+│   ├── setup.js                # テスト環境設定
+│   └── helpers.test.js         # ヘルパー関数のテスト
+├── scripts/                    # ビルドスクリプト
+│   ├── build.js                # ビルドスクリプト
+│   └── watch.js                # ウォッチモード
+├── docs/                       # ドキュメント
+│   └── API.md                  # API仕様書
+├── icons/                      # 拡張機能アイコン
+│   ├── icon16.png
+│   ├── icon32.png
+│   ├── icon48.png
+│   └── icon128.png
+├── 設定ファイル
+│   ├── manifest.json           # Chrome拡張機能マニフェスト
+│   ├── package.json            # npm設定
+│   ├── jest.config.js          # Jest設定
+│   ├── .eslintrc.js            # ESLint設定
+│   ├── .prettierrc             # Prettier設定
+│   ├── .editorconfig           # エディタ設定
+│   └── .gitignore              # Git除外設定
+├── メインファイル
+│   ├── background.js           # バックグラウンドスクリプト
+│   ├── content.js              # コンテンツスクリプト
+│   ├── injected.js             # 注入スクリプト
+│   ├── popup.html              # ポップアップHTML
+│   ├── popup.js                # ポップアップロジック
+│   ├── popup.css               # ポップアップスタイル
+│   └── utils.js                # ユーティリティ関数
+└── ドキュメント
+    ├── README.md               # このファイル
+    ├── CONTRIBUTING.md         # 貢献ガイド
+    ├── CHANGELOG.md            # 変更履歴
+    ├── SECURITY.md             # セキュリティポリシー
+    └── DEVELOPMENT.md          # 開発ドキュメント
+```
 
 ## 制限事項
 

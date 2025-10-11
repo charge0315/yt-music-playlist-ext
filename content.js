@@ -83,16 +83,16 @@ const getYTMusicConfig = () => {
 
           // クライアントバージョンを取得
           const versionMatch = scriptContent.match(/"clientVersion"\s*:\s*"([^"]+)"/);
-          const clientVersion = versionMatch ? versionMatch[1] : "1.20241008.01.00";
+          const clientVersion = versionMatch ? versionMatch[1] : '1.20241008.01.00';
 
           return {
             apiKey: apiKeyMatch[1],
             context: {
               client: {
-                clientName: "WEB_REMIX",
+                clientName: 'WEB_REMIX',
                 clientVersion: clientVersion,
-                gl: "JP",
-                hl: "ja"
+                gl: 'JP',
+                hl: 'ja'
               }
             }
           };
@@ -107,7 +107,7 @@ const getYTMusicConfig = () => {
     const pageContent = document.documentElement.innerHTML;
     const apiKeyMatch = pageContent.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/);
     const versionMatch = pageContent.match(/"clientVersion"\s*:\s*"([^"]+)"/);
-    const clientVersion = versionMatch ? versionMatch[1] : "1.20241008.01.00";
+    const clientVersion = versionMatch ? versionMatch[1] : '1.20241008.01.00';
 
     if (apiKeyMatch) {
       console.log('方法3でAPI設定を取得しました (ページコンテンツから)');
@@ -115,10 +115,10 @@ const getYTMusicConfig = () => {
         apiKey: apiKeyMatch[1],
         context: {
           client: {
-            clientName: "WEB_REMIX",
+            clientName: 'WEB_REMIX',
             clientVersion: clientVersion,
-            gl: "JP",
-            hl: "ja"
+            gl: 'JP',
+            hl: 'ja'
           }
         }
       };
@@ -666,7 +666,7 @@ const addSongsToPlaylist = async (playlistId, songs) => {
       }))
     });
 
-    log(`プレイリストへの追加完了`);
+    log('プレイリストへの追加完了');
     return true;
 
   } catch (error) {

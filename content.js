@@ -22,44 +22,209 @@ const logError = (message) => {
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
+ * YouTube Music内部APIキーとコンテキストを取得
+ */
+const getYTMusicConfig = () => {
+  try {
+    // 方法1: window.ytcfg を使用
+    if (window.ytcfg) {
+      console.log('window.ytcfg が存在します:', window.ytcfg);
+
+      // ytcfg.data_ にアクセス
+      const data = window.ytcfg.data_ || window.ytcfg;
+      const apiKey = data.INNERTUBE_API_KEY;
+      const context = data.INNERTUBE_CONTEXT;
+
+      if (apiKey && context) {
+        console.log('方法1でAPI設定を取得しました (window.ytcfg)', { apiKey: apiKey.substring(0, 10) + '...' });
+        return { apiKey, context };
+      }
+    }
+
+    // 方法2: ページのscriptタグから抽出（より広範囲に検索）
+    const scripts = document.querySelectorAll('script');
+    console.log(`scriptタグを検索中... (${scripts.length}個)`);
+
+    for (const script of scripts) {
+      const scriptContent = script.textContent;
+      if (scriptContent.includes('INNERTUBE_API_KEY')) {
+        // INNERTUBE_API_KEYを抽出（より柔軟なパターン）
+        const apiKeyMatch = scriptContent.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/);
+
+        if (apiKeyMatch) {
+          console.log('APIキーを発見しました:', apiKeyMatch[1].substring(0, 10) + '...');
+
+          // コンテキストを抽出（より正確なマッチング）
+          // INNERTUBE_CONTEXTは複雑なネストされたオブジェクトなので、より広範囲に取得
+          let context = null;
+
+          // パターン1: より広範囲なマッチング
+          const contextMatch1 = scriptContent.match(/"INNERTUBE_CONTEXT"\s*:\s*(\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\})/);
+          if (contextMatch1) {
+            try {
+              context = JSON.parse(contextMatch1[1]);
+              console.log('コンテキストを抽出しました:', context);
+            } catch (e) {
+              console.log('コンテキストのJSON解析に失敗 (パターン1):', e.message);
+            }
+          }
+
+          // コンテキストが取得できた場合
+          if (context) {
+            console.log('方法2でAPI設定を取得しました (scriptタグ、完全なコンテキスト)');
+            return {
+              apiKey: apiKeyMatch[1],
+              context: context
+            };
+          }
+
+          // コンテキストが取得できなかった場合、より詳細なデフォルトを使用
+          console.log('方法2でAPIキーのみ取得、詳細なデフォルトコンテキストを使用');
+
+          // クライアントバージョンを取得
+          const versionMatch = scriptContent.match(/"clientVersion"\s*:\s*"([^"]+)"/);
+          const clientVersion = versionMatch ? versionMatch[1] : "1.20241008.01.00";
+
+          return {
+            apiKey: apiKeyMatch[1],
+            context: {
+              client: {
+                clientName: "WEB_REMIX",
+                clientVersion: clientVersion,
+                gl: "JP",
+                hl: "ja"
+              }
+            }
+          };
+        }
+      }
+    }
+
+    // 方法3: ハードコードされたデフォルト値を使用（最後の手段）
+    console.log('デフォルト設定を試行します');
+
+    // YouTube MusicのページからAPIキーを動的に取得
+    const pageContent = document.documentElement.innerHTML;
+    const apiKeyMatch = pageContent.match(/"INNERTUBE_API_KEY"\s*:\s*"([^"]+)"/);
+    const versionMatch = pageContent.match(/"clientVersion"\s*:\s*"([^"]+)"/);
+    const clientVersion = versionMatch ? versionMatch[1] : "1.20241008.01.00";
+
+    if (apiKeyMatch) {
+      console.log('方法3でAPI設定を取得しました (ページコンテンツから)');
+      return {
+        apiKey: apiKeyMatch[1],
+        context: {
+          client: {
+            clientName: "WEB_REMIX",
+            clientVersion: clientVersion,
+            gl: "JP",
+            hl: "ja"
+          }
+        }
+      };
+    }
+
+    console.log('API設定を取得できませんでした。利用可能なオブジェクト:', {
+      hasYtcfg: !!window.ytcfg,
+      ytcfgType: typeof window.ytcfg,
+      hasYtInitialData: !!window.ytInitialData,
+      scriptCount: scripts.length,
+      documentReady: document.readyState
+    });
+    return null;
+  } catch (error) {
+    logError(`設定取得エラー: ${error.message}`);
+    console.error('詳細なエラー:', error);
+    return null;
+  }
+};
+
+// Injected scriptを読み込む
+const injectScript = () => {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('injected.js');
+  script.onload = () => {
+    script.remove();
+    log('Injected script loaded');
+  };
+  (document.head || document.documentElement).appendChild(script);
+};
+
+// ページ読み込み時にinjected scriptを注入
+injectScript();
+
+/**
+ * ページコンテキストでAPIを呼び出す（CustomEventで通信）
+ */
+const callYTMusicAPIInPageContext = (endpoint, body) => {
+  return new Promise((resolve, reject) => {
+    const requestId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+    // レスポンスリスナーを設定
+    const responseListener = (event) => {
+      if (event.detail.requestId === requestId) {
+        document.removeEventListener('YTMUSIC_API_RESPONSE', responseListener);
+
+        if (event.detail.success) {
+          resolve(event.detail.data);
+        } else {
+          reject(new Error(event.detail.error));
+        }
+      }
+    };
+
+    document.addEventListener('YTMUSIC_API_RESPONSE', responseListener);
+
+    // タイムアウト設定（30秒）
+    setTimeout(() => {
+      document.removeEventListener('YTMUSIC_API_RESPONSE', responseListener);
+      reject(new Error('API呼び出しがタイムアウトしました'));
+    }, 30000);
+
+    // リクエストを送信
+    document.dispatchEvent(new CustomEvent('YTMUSIC_API_REQUEST', {
+      detail: {
+        requestId: requestId,
+        endpoint: endpoint,
+        body: body
+      }
+    }));
+  });
+};
+
+/**
  * YouTube Music内部APIを呼び出す
  */
 const callYTMusicAPI = async (endpoint, body) => {
   try {
-    // YouTube Musicの内部APIキーとコンテキストを取得
-    const ytcfg = window.ytcfg;
-    if (!ytcfg) {
-      throw new Error('YouTube Music API設定が見つかりません');
-    }
+    log(`API呼び出し: ${endpoint}`);
+    console.log('API リクエスト:', { endpoint, body });
 
-    const apiKey = ytcfg.data_.INNERTUBE_API_KEY;
-    const context = ytcfg.data_.INNERTUBE_CONTEXT;
+    // ページコンテキストでAPIを呼び出し（Cookieが含まれる）
+    const responseData = await callYTMusicAPIInPageContext(endpoint, body);
 
-    if (!apiKey || !context) {
-      throw new Error('APIキーまたはコンテキストが見つかりません');
-    }
-
-    const response = await fetch(`https://music.youtube.com/youtubei/v1/${endpoint}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        context: context,
-        ...body
-      }),
-      credentials: 'include'
-    });
-
-    if (!response.ok) {
-      throw new Error(`API呼び出しに失敗しました: ${response.status}`);
-    }
-
-    return await response.json();
+    console.log('API レスポンス:', responseData);
+    return responseData;
   } catch (error) {
     logError(`API呼び出しエラー: ${error.message}`);
     throw error;
   }
+};
+
+/**
+ * ページが完全に読み込まれるまで待機
+ */
+const waitForPageLoad = async (maxRetries = 10) => {
+  for (let i = 0; i < maxRetries; i++) {
+    const config = getYTMusicConfig();
+    if (config) {
+      log('YouTube Musicの設定を取得しました');
+      return true;
+    }
+    log(`ページ読み込みを待機中... (${i + 1}/${maxRetries})`);
+    await wait(1000);
+  }
+  return false;
 };
 
 /**
@@ -68,44 +233,98 @@ const callYTMusicAPI = async (endpoint, body) => {
 const getSubscribedChannels = async () => {
   log('登録チャンネルを取得中...');
 
+  // ページが完全に読み込まれるまで待機
+  const isLoaded = await waitForPageLoad();
+  if (!isLoaded) {
+    throw new Error('YouTube Musicの読み込みに失敗しました。ページをリロードしてから再度お試しください。');
+  }
+
   try {
-    // browseエンドポイントでサブスクリプション情報を取得
+    // browseエンドポイントでライブラリのアーティスト一覧を取得
+    // YouTube Musicでは「登録チャンネル」ではなく「ライブラリのアーティスト」を使用
     const response = await callYTMusicAPI('browse', {
       browseId: 'FEmusic_library_corpus_track_artists'
     });
 
     const channels = [];
 
+    log('APIレスポンスを解析中...');
+    console.log('Response structure:', response);
+
+    // ログイン状態を確認
+    const loggedIn = response?.responseContext?.serviceTrackingParams?.find(
+      p => p.service === 'GFEEDBACK'
+    )?.params?.find(p => p.key === 'logged_in')?.value;
+
+    if (loggedIn === '0') {
+      throw new Error('YouTube Musicにログインしていません。\n\nhttps://music.youtube.com でログインしてから再度お試しください。');
+    }
+
     // レスポンスから登録アーティスト/チャンネル情報を抽出
-    const contents = response?.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]
-      ?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+    // 複数のパターンを試す
+    const tabs = response?.contents?.singleColumnBrowseResultsRenderer?.tabs || [];
+    console.log('tabs found:', tabs.length);
 
-    for (const section of contents) {
-      const gridItems = section?.gridRenderer?.items || [];
+    for (const tab of tabs) {
+      const sectionList = tab?.tabRenderer?.content?.sectionListRenderer?.contents || [];
 
-      for (const item of gridItems) {
-        const musicItem = item?.musicTwoRowItemRenderer;
-        if (!musicItem) continue;
+      for (const section of sectionList) {
+        // gridRendererパターン
+        const gridItems = section?.gridRenderer?.items || [];
 
-        const navigationEndpoint = musicItem?.navigationEndpoint;
-        const browseEndpoint = navigationEndpoint?.browseEndpoint;
+        for (const item of gridItems) {
+          const musicItem = item?.musicTwoRowItemRenderer;
+          if (!musicItem) continue;
 
-        if (browseEndpoint?.browseId) {
-          const channelId = browseEndpoint.browseId;
-          const title = musicItem?.title?.runs?.[0]?.text || '';
+          const navigationEndpoint = musicItem?.navigationEndpoint;
+          const browseEndpoint = navigationEndpoint?.browseEndpoint;
 
-          if (title && channelId.startsWith('UC')) {
-            channels.push({
-              id: channelId,
-              name: title,
-              browseId: channelId
-            });
+          if (browseEndpoint?.browseId) {
+            const channelId = browseEndpoint.browseId;
+            const title = musicItem?.title?.runs?.[0]?.text || '';
+
+            // UCで始まるチャンネルID、またはFEで始まるbrowseIdを受け入れる
+            if (title && (channelId.startsWith('UC') || channelId.startsWith('FE'))) {
+              log(`アーティスト検出: ${title} (${channelId})`);
+              channels.push({
+                id: channelId,
+                name: title,
+                browseId: channelId
+              });
+            }
+          }
+        }
+
+        // musicShelfRendererパターン
+        const shelfItems = section?.musicShelfRenderer?.contents || [];
+
+        for (const item of shelfItems) {
+          const musicItem = item?.musicResponsiveListItemRenderer;
+          if (!musicItem) continue;
+
+          const navigationEndpoint = musicItem?.navigationEndpoint;
+          const browseEndpoint = navigationEndpoint?.browseEndpoint;
+
+          if (browseEndpoint?.browseId) {
+            const channelId = browseEndpoint.browseId;
+            const flexColumns = musicItem?.flexColumns || [];
+            const title = flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer
+              ?.text?.runs?.[0]?.text || '';
+
+            if (title && (channelId.startsWith('UC') || channelId.startsWith('FE'))) {
+              log(`アーティスト検出 (shelf): ${title} (${channelId})`);
+              channels.push({
+                id: channelId,
+                name: title,
+                browseId: channelId
+              });
+            }
           }
         }
       }
     }
 
-    log(`${channels.length}個のチャンネルを検出しました`);
+    log(`${channels.length}個のアーティスト/チャンネルを検出しました`);
     return channels;
   } catch (error) {
     logError(`チャンネル取得エラー: ${error.message}`);
@@ -604,6 +823,12 @@ const fetchPopularSongs = async (songsPerChannel, playlistName) => {
  * メッセージリスナー
  */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // pingメッセージへの応答
+  if (request.action === 'ping') {
+    sendResponse({ status: 'ok' });
+    return true;
+  }
+
   if (request.action === 'fetchLatestSongs') {
     log('楽曲取得リクエストを受信しました');
 

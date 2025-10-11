@@ -93,8 +93,33 @@ document.addEventListener('DOMContentLoaded', () => {
       // アクティブなタブを取得
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
+      if (!tab || !tab.url) {
+        throw new Error('アクティブなタブが見つかりません');
+      }
+
       if (!tab.url.includes('music.youtube.com')) {
-        throw new Error('YouTube Musicのページで実行してください');
+        throw new Error('YouTube Musicのページで実行してください。\nhttps://music.youtube.com を開いてから再度お試しください。');
+      }
+
+      // content scriptが読み込まれているか確認
+      showProgress(20, 'content scriptを確認中...');
+
+      try {
+        // content scriptに ping を送って確認
+        await chrome.tabs.sendMessage(tab.id, { action: 'ping' });
+      } catch (pingError) {
+        console.log('Content script not loaded, injecting...');
+        // content scriptが読み込まれていない場合は手動で注入
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['content.js']
+          });
+          // 少し待機してから再試行
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (injectError) {
+          throw new Error('Content scriptの読み込みに失敗しました。\nページをリロードしてから再度お試しください。');
+        }
       }
 
       // モードに応じてアクションを決定
@@ -103,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // コンテンツスクリプトにメッセージを送信
       showProgress(30, '登録チャンネルを取得中...');
+
       const response = await chrome.tabs.sendMessage(tab.id, {
         action: action,
         songsPerChannel: songsPerChannel,

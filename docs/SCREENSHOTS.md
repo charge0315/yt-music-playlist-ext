@@ -10,13 +10,19 @@
 - サイズ推奨：400px幅程度
 - 内容：取得モード選択、曲数設定、プレイリスト名入力
 
-### 2. screenshot-result.png  
+### 2. screenshot-process.png
+**処理中の進行状況画面**
+- 楽曲検索の進行状況表示画面
+- サイズ推奨：400px幅程度
+- 内容：アーティスト別楽曲検索、進行状況、統計情報
+
+### 3. screenshot-result.png  
 **プレイリスト作成完了画面**
 - 添付された2枚目の画像（結果表示画面）
 - サイズ推奨：400px幅程度
 - 内容：作成されたプレイリスト情報、取得楽曲一覧
 
-### 3. screenshot-playlist.png
+### 4. screenshot-playlist.png
 **作成されたプレイリスト表示画面**
 - 添付された3枚目の画像（YouTube Musicプレイリスト画面）
 - サイズ推奨：400px幅程度
@@ -35,3 +41,10 @@
 - **サイズ**: 幅400px程度（レスポンシブ対応）
 - **品質**: クリアで読みやすい解像度
 - **内容**: UI要素がはっきり見える状態
+
+## 📊 完成状況
+
+- ✅ screenshot-popup.png (設定画面)
+- ✅ screenshot-process.png (処理中画面) ← **追加済み**
+- ⏳ screenshot-result.png (結果画面)
+- ⏳ screenshot-playlist.png (プレイリスト画面)

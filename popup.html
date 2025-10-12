@@ -9,6 +9,10 @@
 <body>
   <div class="container">
     <h1>YT Music Playlist</h1>
+    
+    <div class="description">
+      <p>最新曲、人気曲をあつめて再生リストを作成します🎵</p>
+    </div>
 
     <div class="mode-selection">
       <label>取得モード:</label>
@@ -31,11 +35,11 @@
 
     <div class="playlist-name">
       <label for="playlistName">プレイリスト名:</label>
-      <input type="text" id="playlistName" placeholder="自動生成プレイリスト" value="Latest from Subscriptions">
+      <input type="text" id="playlistName" placeholder="Latest from Subscriptions">
     </div>
 
     <button id="fetchSongs" class="btn-primary">
-      登録チャンネルから楽曲を取得
+      再生リストを作成
     </button>
 
     <div id="status" class="status hidden"></div>

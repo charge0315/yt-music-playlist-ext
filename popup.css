@@ -17,8 +17,24 @@ body {
 h1 {
   font-size: 20px;
   color: #333;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   text-align: center;
+}
+
+.description {
+  background-color: #e8f4f8;
+  border-left: 4px solid #1976d2;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.description p {
+  margin: 0;
+  color: #1565c0;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .mode-selection,
@@ -46,6 +62,26 @@ label {
   cursor: pointer;
   font-size: 14px;
   color: #333;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+  margin-bottom: 0;
 }
 
 .radio-label input[type="radio"] {
@@ -326,5 +362,218 @@ input[type="text"]:focus {
 
   #resultList::-webkit-scrollbar-thumb:hover {
     background: #777;
+  }
+}
+
+.copy-button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.copy-button:hover {
+  background-color: #218838;
+}
+
+.playlist-link {
+  background-color: #f8f9fa;
+  border: 2px solid #28a745;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.playlist-link h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.playlist-url {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.playlist-url:hover {
+  background-color: #218838;
+  text-decoration: none;
+}
+
+.playlist-stats {
+  margin: 10px 0 0 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.auth-error-instructions {
+  background-color: #fff3cd;
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.auth-error-instructions h3 {
+  margin: 0 0 10px 0;
+  color: #856404;
+  font-size: 16px;
+}
+
+.instructions-list p {
+  margin: 5px 0;
+  font-size: 13px;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.song-list-for-manual {
+  margin-top: 15px;
+}
+
+.song-list-for-manual h4 {
+  margin: 0 0 8px 0;
+  color: #856404;
+  font-size: 14px;
+}
+
+.manual-song-list {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.manual-song-item {
+  font-size: 12px;
+  color: #495057;
+  padding: 2px 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.manual-song-item:last-child {
+  border-bottom: none;
+}
+
+.copy-song-list {
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-song-list:hover {
+  background-color: #e0a800;
+}
+
+.status.warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.manual-add-section {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+.manual-add-section h4 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 14px;
+}
+
+.manual-add-section h5 {
+  margin: 12px 0 6px 0;
+  color: #495057;
+  font-size: 13px;
+}
+
+.manual-instructions p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+.video-list-container {
+  margin-top: 10px;
+}
+
+.video-list {
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.video-item {
+  font-size: 11px;
+  color: #495057;
+  padding: 2px 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.video-item:last-child {
+  border-bottom: none;
+}
+
+.copy-video-list {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-video-list:hover {
+  background-color: #5a6268;
+}
+
+.copy-button:active {
+  background-color: #1e7e34;
+}
+
+@media (prefers-color-scheme: dark) {
+  .copy-button {
+    background-color: #20c997;
+  }
+
+  .copy-button:hover {
+    background-color: #1aa085;
+  }
+
+  .copy-button:active {
+    background-color: #148a73;
   }
 }

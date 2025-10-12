@@ -1,23 +1,50 @@
-# アイコンについて
+# 拡張機能アイコン
 
-このディレクトリには拡張機能のアイコンを配置してください。
+YouTube Music Playlist Extension のアイコンファイル
 
-## 必要なアイコンサイズ
+## 🎨 デザインコンセプト
 
-Chrome拡張機能では以下のサイズのアイコンが必要です:
+**YouTube Music → YouTube** の変換をビジュアル化
 
-- `icon16.png` - 16x16ピクセル (ツールバー、ファビコン)
-- `icon32.png` - 32x32ピクセル (Retinaディスプレイ対応)
-- `icon48.png` - 48x48ピクセル (拡張機能管理ページ)
-- `icon128.png` - 128x128ピクセル (Chrome Web Store、インストール時)
+- **左側**: YouTube Music風の音符（オレンジ色 #FF6D00）
+- **中央**: 右向き矢印（変換を表現）
+- **右側**: YouTube風の再生ボタン（赤色 #FF0000）
 
-## アイコンデザインガイドライン
+## 📏 アイコンサイズ
 
-### 推奨事項
-- **シンプルで認識しやすいデザイン**にする
-- **YouTube Musicのテーマカラー**（赤系 #FF0000）を使用
-- **音楽やプレイリスト**をイメージさせるモチーフ
-  - 音符 (♪, ♫)
+| ファイル | サイズ | 用途 |
+|----------|---------|------|
+| `icon16.png` | 16×16px | ブラウザタブ、ツールバー |
+| `icon32.png` | 32×32px | Retina対応、アドレスバー |
+| `icon48.png` | 48×48px | 拡張機能管理画面 |
+| `icon128.png` | 128×128px | Chrome Web Store、インストール画面 |
+
+## 🛠️ 生成方法
+
+```bash
+python create_icons.py
+```
+
+`create_icons.py` スクリプトが全サイズのアイコンを自動生成します。
+
+## 🎯 manifest.json での使用
+
+```json
+{
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png", 
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  }
+}
+```
   - プレイリストアイコン
   - YouTube Musicロゴ風
 - **背景は透過PNG**を推奨

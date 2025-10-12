@@ -69,7 +69,7 @@ YouTube Music (https://music.youtube.com) を開いて、拡張機能アイコ�
 - 🔗 作成されたプレイリストへのリンクが提供されます
 
 ### 5. プレイリスト完成
-作成されたプレイリストは、YouTube Musicの「再生リスト」セクションに表示されます。
+作成されたプレイリストは、YouTubeの「再生リスト」セクションに表示されます。
 
 <img src="docs/screenshot-playlist.png" alt="作成されたプレイリスト" width="400">
 
@@ -119,7 +119,7 @@ YouTube Music (https://music.youtube.com) を開いて、拡張機能アイコ�
 - 🔒 プライバシー：限定公開
 - 📅 作成日：本日更新
 
-このプレイリストは YouTube Music の「再生リスト」タブからアクセスできます。
+このプレイリストは YouTube の「再生リスト」タブからアクセスできます。
 
 ## 🔧 技術仕様
 

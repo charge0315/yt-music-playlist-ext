@@ -310,5 +310,72 @@
     }
   });
 
+  // SAPISID認証ヘッダーを生成する関数を追加
+  document.addEventListener('YTMUSIC_GET_AUTH_HEADERS', async (event) => {
+    const requestId = event.detail.requestId;
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-AuthUser': '0',
+        'X-Origin': window.location.origin,
+        'Origin': window.location.origin
+      };
+
+      // SAPISID認証ヘッダーを追加
+      const cookies = document.cookie;
+      const sapisidMatch = cookies.match(/SAPISID=([^;]+)/);
+
+      if (sapisidMatch) {
+        const sapisid = sapisidMatch[1];
+        const origin = window.location.origin;
+        const timestamp = Math.floor(Date.now() / 1000);
+
+        // SAPISID hash生成
+        const stringToHash = `${timestamp} ${sapisid} ${origin}`;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(stringToHash);
+
+        // SHA-1ハッシュを生成
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        headers['Authorization'] = `SAPISIDHASH ${timestamp}_${hashHex}`;
+        console.log('[Injected] SAPISID認証ヘッダーを生成');
+      }
+
+      // セッショントークンを追加
+      const sessionTokenMatch = cookies.match(/YSC=([^;]+)/);
+      if (sessionTokenMatch) {
+        headers['X-Goog-Visitor-Id'] = sessionTokenMatch[1];
+      }
+
+      // 追加の認証ヘッダー
+      headers['X-YouTube-Client-Name'] = '67';
+      headers['X-YouTube-Client-Version'] = '1.20251006.03.00';
+
+      // Content Scriptに認証ヘッダーを返送
+      document.dispatchEvent(new CustomEvent('YTMUSIC_AUTH_HEADERS_RESPONSE', {
+        detail: {
+          requestId: requestId,
+          success: true,
+          headers: headers
+        }
+      }));
+
+    } catch (error) {
+      console.error('[Injected] 認証ヘッダー生成エラー:', error);
+      // Content Scriptにエラーを送信
+      document.dispatchEvent(new CustomEvent('YTMUSIC_AUTH_HEADERS_RESPONSE', {
+        detail: {
+          requestId: requestId,
+          success: false,
+          error: error.message
+        }
+      }));
+    }
+  });
+
   console.log('[Injected] YouTube Music API Injected Script: Loaded (Enhanced)');
 })();

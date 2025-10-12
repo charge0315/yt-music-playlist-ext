@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Music Playlist Extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "登録チャンネルから最新の楽曲を自動取得してプレイリストにまとめるChrome拡張機能",
   "author": "charge0315",
   "homepage_url": "https://github.com/charge0315/yt-music-playlist-ext",

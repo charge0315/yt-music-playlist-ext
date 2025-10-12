@@ -1,6 +1,6 @@
 {
   "name": "yt-music-playlist-ext",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YouTube Musicの登録チャンネルから最新の楽曲を自動取得してプレイリストにまとめるChrome拡張機能",
   "main": "background.js",
   "scripts": {

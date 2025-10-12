@@ -1276,7 +1276,9 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
     log(`YouTube再生リスト作成開始（認証あり）: "${playlistName}"`);
 
     // 既存の同名プレイリストをチェック
+    log('既存プレイリストの検索を開始...');
     const existingResult = await findExistingPlaylist(playlistName);
+    log(`既存プレイリスト検索結果: ${JSON.stringify(existingResult)}`);
     let wasOverwritten = false;
 
     if (existingResult.found) {
@@ -1284,12 +1286,15 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 
       // 既存プレイリストを削除
       try {
+        log(`既存プレイリスト削除開始: ${existingResult.playlist.id}`);
         await deleteYouTubePlaylist(existingResult.playlist.id);
         log(`✓ 既存プレイリストを削除しました: "${existingResult.playlist.title}"`);
         wasOverwritten = true;
 
         // 削除後少し待機
+        log('削除後の待機時間開始...');
         await wait(2000); // 待機時間を延長
+        log('削除後の待機完了');
       } catch (deleteError) {
         logError(`既存プレイリストの削除に失敗: ${deleteError.message}`);
         // 削除に失敗しても続行（新しいプレイリストを作成）
@@ -1297,7 +1302,9 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
     }
 
     // YouTube Music API設定を取得して流用
+    log('YouTube Music API設定を取得中...');
     const config = await getYTMusicConfig();
+    log(`API設定取得結果: hasContext=${config.hasContext}, hasApiKey=${!!config.apiKey}`);
     if (!config.hasContext || !config.apiKey) {
       throw new Error('YouTube認証情報が取得できませんでした');
     }
@@ -1322,6 +1329,7 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 
     // YouTube Data API endpoint
     const apiUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet,status&key=${config.apiKey}`;
+    log(`YouTube Data API リクエスト開始: ${apiUrl}`);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -1335,11 +1343,14 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
       body: JSON.stringify(playlistData)
     });
 
+    log(`YouTube Data API レスポンス: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
       const errorText = await response.text();
       log(`YouTube API応答エラー: ${response.status} - ${errorText}`);
 
       // YouTube Music内部APIを試行
+      log('YouTube Music内部APIへのフォールバックを開始...');
       return await createYouTubePlaylistInternal(playlistName, description, wasOverwritten);
     }
 
@@ -1376,11 +1387,13 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 const createYouTubePlaylistInternal = async (playlistName, description = '', wasOverwritten = false) => {
   try {
     log(`YouTube Music内部API で再生リスト作成: "${playlistName}"`);
+    log(`wasOverwritten フラグ: ${wasOverwritten}`);
 
     // 既に上位関数で削除処理が完了していない場合のみ削除チェック
     if (!wasOverwritten) {
       log('既存プレイリストの重複チェックを実行...');
       const existingResult = await findExistingPlaylist(playlistName);
+      log(`内部API - 既存プレイリスト検索結果: ${JSON.stringify(existingResult)}`);
       
       if (existingResult.found) {
         log(`同名の既存プレイリストを発見（内部API）: "${existingResult.playlist.title}"`);
@@ -1414,7 +1427,11 @@ const createYouTubePlaylistInternal = async (playlistName, description = '', was
           privacyStatus: 'UNLISTED'
         };
 
+        log(`内部API エンドポイント試行: ${endpoint}`);
+        log(`リクエストボディ: ${JSON.stringify(requestBody)}`);
+        
         const response = await callYTMusicAPI(endpoint, requestBody);
+        log(`エンドポイント ${endpoint} レスポンス: ${JSON.stringify(response)}`);
 
         if (response && (response.playlistId || response.playlistEditResults)) {
           const playlistId = response.playlistId || response.playlistEditResults?.[0]?.playlistId;
@@ -1428,10 +1445,14 @@ const createYouTubePlaylistInternal = async (playlistName, description = '', was
               method: `youtube_music_api_${endpoint}`,
               wasOverwritten: wasOverwritten
             };
+          } else {
+            log(`エンドポイント ${endpoint}: playlistId が見つかりません`);
           }
+        } else {
+          log(`エンドポイント ${endpoint}: 無効なレスポンス`);
         }
       } catch (endpointError) {
-        log(`エンドポイント ${endpoint} 失敗: ${endpointError.message}`);
+        logError(`エンドポイント ${endpoint} 失敗: ${endpointError.message}`);
         continue;
       }
     }

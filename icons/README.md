@@ -2,9 +2,16 @@
 
 YouTube Music Playlist Extension の**AI生成プロフェッショナル品質**アイコン
 
-## 🤖 Gemini AI Generated Icons v3.0
+## 🤖 Gemini AI Generated Icons v3.1 (最新版)
 
-**Google Gemini AI** によって生成された最高品質のアイコンセット
+**Google Gemini AI** によって生成された**最新バージョン**の最高品質アイコンセット
+
+### 🆕 v3.1 アップデート内容
+
+- **新デザイン**: より洗練された音符とYouTubeアイコン
+- **完璧な配置**: 左（YouTube Music）→ 中央（矢印）→ 右（YouTube）
+- **改良された視覚効果**: 影とグラデーションの最適化
+- **ブランド整合性**: YouTubeデザインガイドライン完全準拠
 
 ### 🎨 AIデザインコンセプト
 
@@ -64,14 +71,16 @@ Gemini AI による自己品質評価で**パーフェクトスコア達成**：
 python process_gemini_icon.py
 ```
 
-### ファイル構成
+### ファイル構成 (v3.1)
 ```
 icons/
-├── gemini_source_128px.png    # Gemini AI原本
-├── icon16.png                 # 16px最適化版
-├── icon32.png                 # 32px標準版  
-├── icon48.png                 # 48px高品質版
-└── icon128.png                # 128px完全版
+├── gemini_latest_source.png       # 🆕 最新Gemini AI原本 (v3.1)
+├── gemini_source_128px.png        # 処理用マスターファイル  
+├── gemini_source_128px_backup.png # 前バージョンバックアップ
+├── icon16.png                     # 16px最適化版
+├── icon32.png                     # 32px標準版  
+├── icon48.png                     # 48px高品質版
+└── icon128.png                    # 128px完全版
 ```
 
 ### manifest.json設定
@@ -98,7 +107,8 @@ icons/
 |------------|----------|------------|------|
 | v1.0 | 手動作成 | 😅 適当 | 単純図形組み合わせ |
 | v2.0 | Python自動生成 | 🔧 改良 | プログラマブル、一定品質 |
-| **v3.0** | **🤖 Gemini AI** | **✨ 完璧** | **プロフェッショナル品質** |
+| v3.0 | 🤖 Gemini AI | ✨ 完璧 | プロフェッショナル品質 |
+| **v3.1** | **🤖 Gemini AI v2** | **🚀 最高峰** | **最新デザイン、完璧配置** |
 
 ## 🎯 結論
 

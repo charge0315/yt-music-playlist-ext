@@ -1258,11 +1258,21 @@ const deleteYouTubePlaylist = async (playlistId) => {
   }
 };
 
+// プレイリスト作成の実行状態管理
+let isCreatingPlaylist = false;
+
 /**
  * YouTube APIで再生リストを作成（YouTube Music認証を使用）
  */
 const createYouTubePlaylistWithAuth = async (playlistName, description = '') => {
+  // 既に作成中の場合は待機
+  if (isCreatingPlaylist) {
+    log('プレイリスト作成が既に実行中です。重複実行を防止します。');
+    return { success: false, error: 'プレイリスト作成が既に実行中です' };
+  }
+
   try {
+    isCreatingPlaylist = true;
     log(`YouTube再生リスト作成開始（認証あり）: "${playlistName}"`);
 
     // 既存の同名プレイリストをチェック
@@ -1279,7 +1289,7 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
         wasOverwritten = true;
 
         // 削除後少し待機
-        await wait(1000);
+        await wait(2000); // 待機時間を延長
       } catch (deleteError) {
         logError(`既存プレイリストの削除に失敗: ${deleteError.message}`);
         // 削除に失敗しても続行（新しいプレイリストを作成）
@@ -1351,9 +1361,12 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
   } catch (error) {
     logError(`YouTube Data API再生リスト作成エラー: ${error.message}`);
 
-    // フォールバック: YouTube Music内部APIを試行
+    // フォールバック: YouTube Music内部APIを試行（重複削除を避けるためwasOverwrittenを渡す）
     log('YouTube Music内部APIでの作成を試行します...');
-    return await createYouTubePlaylistInternal(playlistName, description);
+    return await createYouTubePlaylistInternal(playlistName, description, wasOverwritten);
+  } finally {
+    // 実行状態をリセット
+    isCreatingPlaylist = false;
   }
 };
 
@@ -1363,6 +1376,26 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 const createYouTubePlaylistInternal = async (playlistName, description = '', wasOverwritten = false) => {
   try {
     log(`YouTube Music内部API で再生リスト作成: "${playlistName}"`);
+
+    // 既に上位関数で削除処理が完了していない場合のみ削除チェック
+    if (!wasOverwritten) {
+      log('既存プレイリストの重複チェックを実行...');
+      const existingResult = await findExistingPlaylist(playlistName);
+      
+      if (existingResult.found) {
+        log(`同名の既存プレイリストを発見（内部API）: "${existingResult.playlist.title}"`);
+        try {
+          await deleteYouTubePlaylist(existingResult.playlist.id);
+          log(`✓ 既存プレイリストを削除しました（内部API）: "${existingResult.playlist.title}"`);
+          wasOverwritten = true;
+          await wait(2000); // 削除後の待機
+        } catch (deleteError) {
+          logError(`既存プレイリストの削除に失敗（内部API）: ${deleteError.message}`);
+        }
+      }
+    } else {
+      log('既存プレイリストは既に削除済みです');
+    }
 
     // 複数のエンドポイントを試行
     const endpoints = [

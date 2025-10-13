@@ -1411,6 +1411,324 @@ let isCreatingPlaylist = false;
 const creatingPlaylists = new Set(); // 作成中のプレイリスト名を追跡
 
 /**
+ * YouTube Data API v3を使用してプレイリストを作成
+ */
+const createYouTubePlaylistV3 = async (playlistName, description = '') => {
+  try {
+    log(`YouTube Data API v3でプレイリスト作成開始: "${playlistName}"`);
+
+    // YouTubeのCookieからアクセストークンを取得
+    const cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    log(`YouTube Cookieを${cookies.length}個取得しました`);
+
+    // SAPISIDトークンを取得
+    const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
+    if (!sapisidCookie) {
+      throw new Error('YouTubeにログインしていません。YouTubeにログインしてから再度お試しください。');
+    }
+
+    const sapisid = sapisidCookie.value;
+    const origin = 'https://www.youtube.com';
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    // SAPISIDハッシュを生成
+    const hashInput = `${timestamp} ${sapisid} ${origin}`;
+    const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(hashInput));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const sapisidhash = `${timestamp}_${hashHex}`;
+
+    log('SAPISID認証ハッシュを生成しました');
+
+    // YouTube内部APIキーを取得（ページから抽出）
+    let apiKey = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30'; // YouTube Web Clientのデフォルトキー
+
+    // YouTubeページから実際のAPIキーを取得を試みる
+    try {
+      const ytInitialData = document.querySelector('script[nonce]')?.textContent;
+      const apiKeyMatch = ytInitialData?.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+      if (apiKeyMatch) {
+        apiKey = apiKeyMatch[1];
+        log(`ページからAPIキーを抽出: ${apiKey.substring(0, 10)}...`);
+      }
+    } catch (e) {
+      log('ページからのAPIキー抽出失敗、デフォルトキーを使用');
+    }
+
+    // 既存の同名プレイリストを検索して削除
+    let wasOverwritten = false;
+    try {
+      log('既存プレイリストを検索中...');
+      const searchUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true&maxResults=50&key=${apiKey}`;
+
+      const searchResponse = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `SAPISIDHASH ${sapisidhash}`,
+          'X-Origin': origin,
+          'X-Goog-AuthUser': '0'
+        },
+        credentials: 'include'
+      });
+
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        const existingPlaylist = searchData.items?.find(
+          item => item.snippet.title.trim().toLowerCase() === playlistName.trim().toLowerCase()
+        );
+
+        if (existingPlaylist) {
+          log(`既存プレイリストを発見: ${existingPlaylist.id}`);
+
+          // 既存プレイリストを削除
+          const deleteUrl = `https://www.googleapis.com/youtube/v3/playlists?id=${existingPlaylist.id}&key=${apiKey}`;
+          const deleteResponse = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `SAPISIDHASH ${sapisidhash}`,
+              'X-Origin': origin,
+              'X-Goog-AuthUser': '0'
+            },
+            credentials: 'include'
+          });
+
+          if (deleteResponse.ok || deleteResponse.status === 204) {
+            log('✓ 既存プレイリストを削除しました');
+            wasOverwritten = true;
+            await wait(2000); // 削除後の待機
+          } else {
+            log(`既存プレイリスト削除失敗: ${deleteResponse.status}`);
+          }
+        }
+      }
+    } catch (searchError) {
+      log(`既存プレイリスト検索エラー（続行）: ${searchError.message}`);
+    }
+
+    // 新しいプレイリストを作成
+    const createUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet,status&key=${apiKey}`;
+
+    const requestBody = {
+      snippet: {
+        title: playlistName,
+        description: description || `YouTube Music登録アーティストからの楽曲コレクション (${new Date().toLocaleDateString('ja-JP')})`,
+        defaultLanguage: 'ja'
+      },
+      status: {
+        privacyStatus: 'private' // private, unlisted, public
+      }
+    };
+
+    log('YouTube Data API v3にプレイリスト作成リクエストを送信中...');
+    log(`リクエストボディ: ${JSON.stringify(requestBody, null, 2)}`);
+
+    const response = await fetch(createUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `SAPISIDHASH ${sapisidhash}`,
+        'Content-Type': 'application/json',
+        'X-Origin': origin,
+        'X-Goog-AuthUser': '0'
+      },
+      body: JSON.stringify(requestBody),
+      credentials: 'include'
+    });
+
+    log(`YouTube API レスポンスステータス: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      log(`YouTube API エラーレスポンス: ${errorText}`);
+      throw new Error(`YouTube API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    log(`YouTube API レスポンス: ${JSON.stringify(data, null, 2).substring(0, 500)}`);
+
+    if (data.id) {
+      log(`✓ YouTubeプレイリスト作成成功: ${data.id}`);
+      return {
+        success: true,
+        playlistId: data.id,
+        playlistUrl: `https://www.youtube.com/playlist?list=${data.id}`,
+        wasOverwritten: wasOverwritten,
+        method: 'youtube_data_api_v3'
+      };
+    } else {
+      throw new Error('プレイリストIDが返されませんでした');
+    }
+
+  } catch (error) {
+    logError(`YouTube Data API v3 プレイリスト作成エラー: ${error.message}`);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * YouTube Data API v3を使用してプレイリストに動画を追加
+ */
+const addVideosToYouTubePlaylistV3 = async (playlistId, songs, batchSize = 20) => {
+  try {
+    log(`YouTube Data API v3でプレイリスト ${playlistId} に ${songs.length}曲を追加開始`);
+
+    let addedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+    const foundVideos = [];
+
+    // YouTubeのCookieからアクセストークンを取得
+    const cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
+
+    if (!sapisidCookie) {
+      throw new Error('YouTubeにログインしていません');
+    }
+
+    const sapisid = sapisidCookie.value;
+    const origin = 'https://www.youtube.com';
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    // SAPISIDハッシュを生成
+    const hashInput = `${timestamp} ${sapisid} ${origin}`;
+    const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(hashInput));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const sapisidhash = `${timestamp}_${hashHex}`;
+
+    // APIキーを取得
+    const apiKey = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30';
+
+    // 各楽曲をYouTubeで検索して動画IDを取得
+    for (let i = 0; i < songs.length; i++) {
+      const song = songs[i];
+
+      try {
+        const artistName = song.artist || song.channel || 'Unknown Artist';
+        const songTitle = song.title || 'Unknown Title';
+
+        log(`進捗: ${i + 1}/${songs.length} - "${artistName} - ${songTitle}" を検索中...`);
+
+        const videoResult = await searchYouTubeVideo(artistName, songTitle);
+
+        if (videoResult) {
+          foundVideos.push({
+            videoId: videoResult.videoId,
+            title: videoResult.title,
+            originalSong: song
+          });
+        } else {
+          skippedCount++;
+          log(`スキップ: "${artistName} - ${songTitle}" の動画が見つかりませんでした`);
+        }
+
+        await wait(300); // レート制限対策
+
+      } catch (error) {
+        skippedCount++;
+        logError(`検索エラー: "${song.artist || song.channel} - ${song.title}": ${error.message}`);
+        errors.push(`${song.artist || song.channel} - ${song.title}: ${error.message}`);
+        continue;
+      }
+    }
+
+    log(`YouTube検索完了: ${foundVideos.length}個の動画を発見, ${skippedCount}個をスキップ`);
+
+    if (foundVideos.length === 0) {
+      return {
+        success: false,
+        error: '追加可能な動画が見つかりませんでした',
+        addedCount: 0,
+        totalFound: 0,
+        totalSongs: songs.length,
+        skippedCount: skippedCount,
+        errors: errors
+      };
+    }
+
+    // 動画をプレイリストに追加
+    log('YouTube Data API v3で動画を追加中...');
+
+    for (let i = 0; i < foundVideos.length; i++) {
+      const video = foundVideos[i];
+
+      try {
+        const addUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=${apiKey}`;
+
+        const requestBody = {
+          snippet: {
+            playlistId: playlistId,
+            resourceId: {
+              kind: 'youtube#video',
+              videoId: video.videoId
+            }
+          }
+        };
+
+        const response = await fetch(addUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `SAPISIDHASH ${sapisidhash}`,
+            'Content-Type': 'application/json',
+            'X-Origin': origin,
+            'X-Goog-AuthUser': '0'
+          },
+          body: JSON.stringify(requestBody),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          addedCount++;
+          log(`✓ 動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
+        } else {
+          const errorText = await response.text();
+          throw new Error(`YouTube API error: ${response.status} - ${errorText}`);
+        }
+
+        // レート制限対策（バッチ処理）
+        if ((i + 1) % 10 === 0) {
+          log(`バッチ処理: ${i + 1}/${foundVideos.length} 完了、待機中...`);
+          await wait(1000);
+        } else {
+          await wait(200);
+        }
+
+      } catch (error) {
+        logError(`動画追加エラー (${video.title}): ${error.message}`);
+        errors.push(`${video.title}: ${error.message}`);
+        continue;
+      }
+    }
+
+    log(`YouTube Data API v3 動画追加完了: ${addedCount}/${foundVideos.length}動画を追加`);
+
+    return {
+      success: addedCount > 0,
+      addedCount: addedCount,
+      totalFound: foundVideos.length,
+      totalSongs: songs.length,
+      skippedCount: skippedCount,
+      errors: errors,
+      foundVideos: foundVideos
+    };
+
+  } catch (error) {
+    logError(`YouTube Data API v3 動画追加エラー: ${error.message}`);
+    return {
+      success: false,
+      error: error.message,
+      addedCount: 0,
+      totalFound: 0,
+      totalSongs: songs.length,
+      skippedCount: songs.length,
+      errors: [error.message]
+    };
+  }
+};
+
+/**
  * YouTube APIで再生リストを作成（YouTube Music認証を使用）
  */
 const createYouTubePlaylistWithAuth = async (playlistName, description = '') => {
@@ -2421,21 +2739,13 @@ const fetchLatestSongs = async (songsPerChannel, playlistName, createPlaylistOpt
 
     log(`合計${allSongs.length}曲を取得しました`);
 
-    // プレイリスト作成オプションが有効な場合
-    log(`プレイリスト作成オプション判定: ${createPlaylistOption} (型: ${typeof createPlaylistOption})`);
+    // プレイリスト作成オプションが有効な場合 - YouTube Data API v3を使用
     if (createPlaylistOption) {
-      // プレイリスト作成前の重複チェック（追加の安全策）
-      if (creatingPlaylists.has(playlistName)) {
-        log(`プレイリスト "${playlistName}" は既に作成処理中です。処理をスキップします。`);
-        throw new Error(`プレイリスト "${playlistName}" は既に作成処理中です`);
-      }
-
       try {
-        log('YouTube再生リストの作成を開始（認証あり）...');
-        log(`現在作成中のプレイリスト: ${Array.from(creatingPlaylists).join(', ') || 'なし'}`);
+        log('YouTube Data API v3で再生リストの作成を開始...');
 
-        // まず認証ありのYouTube APIで再生リストを作成
-        const createResult = await createYouTubePlaylistWithAuth(
+        // YouTube Data API v3で再生リストを作成
+        const createResult = await createYouTubePlaylistV3(
           playlistName,
           `アーティストの最新楽曲 (${new Date().toLocaleDateString('ja-JP')})`
         );
@@ -2444,7 +2754,7 @@ const fetchLatestSongs = async (songsPerChannel, playlistName, createPlaylistOpt
           log(`✓ YouTube再生リスト作成成功: ${createResult.playlistId}`);
 
           // 動画を検索して追加
-          const addResult = await addVideosToYouTubePlaylist(createResult.playlistId, allSongs);
+          const addResult = await addVideosToYouTubePlaylistV3(createResult.playlistId, allSongs);
 
           if (addResult.success) {
             const overwriteText = createResult.wasOverwritten ? '（既存を上書き）' : '';
@@ -2492,7 +2802,7 @@ const fetchLatestSongs = async (songsPerChannel, playlistName, createPlaylistOpt
           logError(`YouTube再生リスト作成に失敗: ${createResult.error}`);
         }
       } catch (error) {
-        logError(`プレイリスト作成処理でエラー: ${error.message}`);
+        logError(`YouTube再生リスト作成処理でエラー: ${error.message}`);
       }
     }
 
@@ -2574,12 +2884,71 @@ const fetchPopularSongs = async (songsPerChannel, playlistName, createPlaylistOp
 
     log(`合計${allSongs.length}曲を取得しました`);
 
-    // プレイリスト作成オプションが有効な場合
-    // 注意: YouTube API認証エラーが発生するため、現在は手動作成ガイドを表示
+    // プレイリスト作成オプションが有効な場合 - YouTube Data API v3を使用
     if (createPlaylistOption) {
-      log('⚠️ YouTube API認証の問題により、自動プレイリスト作成は現在利用できません');
-      log('手動プレイリスト作成ガイドを表示します');
-      // 自動作成を試みず、直接手動ガイドにフォールバック
+      try {
+        log('YouTube Data API v3で再生リストの作成を開始...');
+
+        // YouTube Data API v3で再生リストを作成
+        const createResult = await createYouTubePlaylistV3(
+          playlistName,
+          `アーティストの人気楽曲 (${new Date().toLocaleDateString('ja-JP')})`
+        );
+
+        if (createResult.success) {
+          log(`✓ YouTube再生リスト作成成功: ${createResult.playlistId}`);
+
+          // 動画を検索して追加
+          const addResult = await addVideosToYouTubePlaylistV3(createResult.playlistId, allSongs);
+
+          if (addResult.success) {
+            const overwriteText = createResult.wasOverwritten ? '（既存を上書き）' : '';
+            log(`✓ YouTube再生リスト作成完了: ${addResult.addedCount}/${addResult.totalFound}動画を追加`);
+
+            return {
+              success: true,
+              totalSongs: allSongs.length,
+              songs: allSongs,
+              playlist: {
+                id: createResult.playlistId,
+                url: createResult.playlistUrl,
+                name: playlistName,
+                addedVideos: addResult.addedCount,
+                totalFound: addResult.totalFound,
+                skipped: addResult.skippedCount,
+                wasOverwritten: createResult.wasOverwritten
+              },
+              message: `YouTube再生リスト "${playlistName}" を作成${overwriteText}し、${addResult.addedCount}個の動画を追加しました！`,
+              totalChannels: processedCount,
+              playlistName: playlistName,
+              details: `検索結果: ${addResult.totalFound}/${allSongs.length}個の動画を発見, ${addResult.skippedCount}個をスキップ`
+            };
+          } else {
+            logError(`動画追加に失敗: ${addResult.error}`);
+            const overwriteText = createResult.wasOverwritten ? '（既存を上書き）' : '';
+            return {
+              success: true,
+              totalSongs: allSongs.length,
+              songs: allSongs,
+              playlist: {
+                id: createResult.playlistId,
+                url: createResult.playlistUrl,
+                name: playlistName,
+                addedVideos: 0,
+                wasOverwritten: createResult.wasOverwritten
+              },
+              message: `YouTube再生リスト "${playlistName}" は作成${overwriteText}されましたが、動画の追加に失敗しました。`,
+              totalChannels: processedCount,
+              playlistName: playlistName,
+              warning: addResult.error
+            };
+          }
+        } else {
+          logError(`YouTube再生リスト作成に失敗: ${createResult.error}`);
+        }
+      } catch (error) {
+        logError(`YouTube再生リスト作成処理でエラー: ${error.message}`);
+      }
     }
 
     // プレイリスト作成が無効、または作成に失敗した場合は楽曲リストのみ提供

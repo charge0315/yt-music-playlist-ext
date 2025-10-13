@@ -9,10 +9,13 @@
     "activeTab",
     "storage",
     "scripting",
-    "cookies"
+    "cookies",
+    "identity"
   ],
   "host_permissions": [
-    "https://music.youtube.com/*"
+    "https://music.youtube.com/*",
+    "https://www.youtube.com/*",
+    "https://www.googleapis.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

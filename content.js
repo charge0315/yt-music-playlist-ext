@@ -1339,9 +1339,9 @@ const deleteYouTubePlaylist = async (playlistId) => {
     // YouTube Music内部APIを使用してプレイリストを削除
     // 複数の削除方法を順次試行
     const deleteMethods = [
-      // 方法1: browse/delete_playlist エンドポイント
+      // 方法1: playlist/delete エンドポイント
       {
-        endpoint: 'browse/delete_playlist',
+        endpoint: 'playlist/delete',
         params: { playlistId: playlistId }
       },
       // 方法2: browse/edit_playlist エンドポイント（修正版）
@@ -1357,7 +1357,7 @@ const deleteYouTubePlaylist = async (playlistId) => {
       },
       // 方法3: 簡略化されたdelete
       {
-        endpoint: 'browse/delete_playlist',
+        endpoint: 'playlist/delete',
         params: {
           playlistId: playlistId,
           context: getYTMusicConfig()?.context
@@ -1499,9 +1499,8 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
     // YouTube Music内部APIでプレイリストを作成
     log('YouTube Music API経由でプレイリスト作成中...');
 
-    // より簡潔なリクエストボディを使用
+    // YouTube Music内部APIの正しい形式を使用
     const createRequest = {
-      context: config.context,
       title: playlistName,
       description: description || '',
       privacyStatus: 'UNLISTED'
@@ -1509,7 +1508,7 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 
     log(`プレイリスト作成リクエスト: ${JSON.stringify(createRequest, null, 2)}`);
 
-    const response = await callYTMusicAPI('browse/create_playlist', createRequest);
+    const response = await callYTMusicAPI('playlist/create', createRequest);
 
     log(`プレイリスト作成API応答: ${JSON.stringify(response, null, 2)}`);
 
@@ -1842,7 +1841,7 @@ const addVideosToYouTubePlaylistWithAuth = async (playlistId, songs, batchSize =
             for (const videoId of videoIds) {
               try {
                 const individualResponse = await callYTMusicAPI('browse/get_add_to_playlist', {
-                  videoIds: [videoId]
+                  videoId: videoId
                 });
 
                 if (individualResponse) {

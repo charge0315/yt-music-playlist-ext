@@ -219,7 +219,7 @@
       });
 
       // APIリクエストを実行
-      const requestBody = {
+      let requestBody = {
         context: context,
         ...body
       };
@@ -272,7 +272,20 @@
         console.log('[Injected] 認証ヘッダー生成エラー:', authError.message);
       }
 
-      const response = await fetch(`https://music.youtube.com/youtubei/v1/${endpoint}?key=${apiKey}`, {
+      // API URL構築 - シンプルで確実なアプローチ
+      const apiUrl = `https://music.youtube.com/youtubei/v1/${endpoint}?key=${apiKey}`;
+
+      // プレイリスト作成の場合、特別な処理
+      if (endpoint === 'playlist/create') {
+        requestBody = {
+          context: context,
+          title: body.title || body.playlistTitle,
+          description: body.description || '',
+          privacyStatus: 'UNLISTED'
+        };
+      }
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(requestBody),
@@ -313,7 +326,7 @@
   // SAPISID認証ヘッダーを生成する関数を追加
   document.addEventListener('YTMUSIC_GET_AUTH_HEADERS', async (event) => {
     const requestId = event.detail.requestId;
-    
+
     try {
       const headers = {
         'Content-Type': 'application/json',

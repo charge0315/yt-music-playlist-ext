@@ -2139,59 +2139,35 @@ const addVideosToYouTubePlaylist = async (playlistId, songs, batchSize = 20) => 
       try {
         const videoIds = batch.map(video => video.videoId);
 
-        // 複数のAPIエンドポイントを試行
+        // YouTube Music APIで動画を追加（browse/edit_playlistのみ使用）
         let response = null;
-        const apiEndpoints = [
-          'browse/edit_playlist',
-          'playlist/get_add_to_playlist',
-          'browse/add_to_playlist',
-          'playlist/add_videos'
-        ];
 
-        for (const endpoint of apiEndpoints) {
-          try {
-            log(`APIエンドポイント試行: ${endpoint}`);
+        try {
+          log(`APIエンドポイント試行: browse/edit_playlist`);
 
-            if (endpoint === 'browse/edit_playlist') {
-              response = await callYTMusicAPI(endpoint, {
-                playlistId: playlistId,
-                actions: videoIds.map(videoId => ({
-                  action: 'ACTION_ADD_VIDEO',
-                  addedVideoId: videoId
-                }))
-              });
-            } else if (endpoint === 'playlist/get_add_to_playlist') {
-              response = await callYTMusicAPI(endpoint, {
-                playlistId: playlistId,
-                videoIds: videoIds
-              });
-            } else if (endpoint === 'browse/add_to_playlist') {
-              response = await callYTMusicAPI(endpoint, {
-                playlistId: playlistId,
-                videoIds: videoIds
-              });
-            } else {
-              response = await callYTMusicAPI(endpoint, {
-                playlistId: playlistId,
-                videoIds: videoIds
-              });
-            }
+          response = await callYTMusicAPI('browse/edit_playlist', {
+            playlistId: playlistId,
+            actions: videoIds.map(videoId => ({
+              action: 'ACTION_ADD_VIDEO',
+              addedVideoId: videoId
+            }))
+          });
 
-            if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
-              log(`✓ 成功したAPIエンドポイント: ${endpoint}`);
-              break;
-            }
-          } catch (endpointError) {
-            log(`APIエンドポイント ${endpoint} 失敗: ${endpointError.message}`);
-            continue;
+          if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
+            log(`✓ browse/edit_playlist で成功`);
+          } else {
+            throw new Error(`レスポンスが不正: ${response?.status || 'Unknown error'}`);
           }
+        } catch (endpointError) {
+          log(`browse/edit_playlist 失敗: ${endpointError.message}`);
+          response = null;
         }
 
         if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
           addedCount += videoIds.length;
           log(`✓ バッチ ${Math.floor(i/batchSize) + 1}: ${videoIds.length}動画を追加`);
         } else {
-          throw new Error(`全てのAPIエンドポイントが失敗: ${response?.status || 'Unknown error'}`);
+          throw new Error(`動画追加API失敗: ${response?.status || 'レスポンスなし'}`);
         }
 
         // レート制限対策

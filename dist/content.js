@@ -830,7 +830,7 @@ const getLatestSongsFromChannel = async (channel, count = 3) => {
 
     console.log(`${channel.name} - sections count: ${sections.length}`);
 
-    let songs = [];
+    const songs = [];
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       console.log(`${channel.name} - section ${i} keys:`, Object.keys(section));
@@ -901,7 +901,7 @@ const getPopularSongsFromChannel = async (channel, count = 1) => {
       return [];
     }
 
-    let songs = [];
+    const songs = [];
     for (const section of sections) {
       const shelf = section.musicShelfRenderer || section.musicCarouselShelfRenderer;
       if (shelf) {
@@ -1250,26 +1250,38 @@ const createPlaylistWithYouTubeDataAPI = async (playlistName, description) => {
     }
     creatingPlaylists.add(playlistName);
 
-    let cookies = await getCookiesFromBackground();
+    let cookies = await getCookiesFromBackground().catch(() => null);
     if (!Array.isArray(cookies)) cookies = [];
     log(`YouTube Cookieを${cookies.length}個取得しました`);
 
-    const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
-    if (!sapisidCookie) {
+    // try cookies from background first
+    let sapisid = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID')?.value;
+    // fallback: try document.cookie in content script (sometimes cookies are HttpOnly or not available via chrome.cookies)
+    if (!sapisid) {
+      try {
+        const dc = document.cookie || '';
+        const m = dc.match(/(?:^|; )(__Secure-3PAPISID|SAPISID)=([^;]+)/);
+        if (m) sapisid = m[2];
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (!sapisid) {
       throw new Error('YouTubeにログインしていません。YouTubeにログインしてから再度お試しください。');
     }
 
-    const sapisid = sapisidCookie.value;
-    const origin = 'https://www.youtube.com';
-    const timestamp = Math.floor(Date.now() / 1000);
+    // Helper: compute SAPISIDHASH for given origin
+    const computeSapisidHash = async (sapisidValue, originValue) => {
+      const ts = Math.floor(Date.now() / 1000);
+      const input = `${ts} ${sapisidValue} ${originValue}`;
+      const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(input));
+      const arr = Array.from(new Uint8Array(buf));
+      const hex = arr.map(b => b.toString(16).padStart(2, '0')).join('');
+      return { sapisidhash: `${ts}_${hex}`, ts };
+    };
 
-    const hashInput = `${timestamp} ${sapisid} ${origin}`;
-    const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(hashInput));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    const sapisidhash = `${timestamp}_${hashHex}`;
-
-    log('SAPISID認証ハッシュを生成しました');
+    log('SAPISIDを使った認証ハッシュを生成する準備ができました');
 
     let apiKey = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30';
 
@@ -1299,6 +1311,7 @@ const createPlaylistWithYouTubeDataAPI = async (playlistName, description) => {
       log(`既存プレイリスト検索・削除エラー（続行）: ${searchError.message}`);
     }
 
+
     const createUrl = `https://www.googleapis.com/youtube/v3/playlists?part=snippet,status&key=${apiKey}`;
 
     const requestBody = {
@@ -1312,37 +1325,98 @@ const createPlaylistWithYouTubeDataAPI = async (playlistName, description) => {
       }
     };
 
-    log('YouTube Data API v3にプレイリスト作成リクエストを送信中...');
-    const response = await fetch(createUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `SAPISIDHASH ${sapisidhash}`,
-        'Content-Type': 'application/json',
-        'X-Origin': origin,
-        'X-Goog-AuthUser': '0'
-      },
-      body: JSON.stringify(requestBody),
-      credentials: 'include'
-    });
+    log('YouTube Data API v3にプレイリスト作成リクエストを送信します（originリトライを試行）...');
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`YouTube API error: ${response.status} - ${errorText}`);
+    // Try multiple origin candidates to work around XD3 origin/host mismatch issues
+    const originCandidates = Array.from(new Set([
+      window.location?.origin || '',
+      'https://music.youtube.com',
+      'https://www.youtube.com'
+    ])).filter(Boolean);
+
+    let data = null;
+    let lastErrorText = null;
+
+    for (const tryOrigin of originCandidates) {
+      try {
+        const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
+        const headers = {
+          'Authorization': `SAPISIDHASH ${tryHash}`,
+          'Content-Type': 'application/json',
+          'X-Origin': tryOrigin,
+          'X-Goog-AuthUser': '0'
+        };
+
+        log(`試行: origin=${tryOrigin} を使用してリクエスト送信`);
+        log('送信ヘッダー:', headers);
+
+        const response = await fetch(createUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(requestBody),
+          credentials: 'include'
+        });
+
+        const text = await response.text();
+        if (!response.ok) {
+          lastErrorText = `status=${response.status} body=${text}`;
+          logError(`プレイリスト作成試行でエラー: origin=${tryOrigin} - ${lastErrorText}`);
+
+          // If server indicates XD3 origin mismatch, continue to next candidate
+          if (text && text.includes('Origin') && text.includes('XD3')) {
+            log('XD3 origin mismatch を検出、別のoriginで再試行します');
+            await wait(300);
+            continue;
+          }
+
+          // Other errors: throw to outer handler
+          throw new Error(lastErrorText);
+        }
+
+        data = JSON.parse(text);
+        break; // success
+      } catch (err) {
+        logError(`origin=${tryOrigin} のリクエストで例外: ${err.message}`);
+        lastErrorText = err.message;
+        // try next origin
+        await wait(200);
+        continue;
+      }
     }
 
-    const data = await response.json();
+    if (!data) {
+      // 最後のエラーをログ
+      logError(`YouTube Data API create failed for all origins. lastError=${lastErrorText}`);
 
-    if (data.id) {
-      log(`✓ YouTubeプレイリスト作成成功: ${data.id}`);
-      return {
-        success: true,
-        playlistId: data.id,
-        playlistUrl: `https://www.youtube.com/playlist?list=${data.id}`,
-        wasOverwritten: wasOverwritten,
-        method: 'youtube_data_api_v3'
-      };
-    } else {
-      throw new Error('プレイリストIDが返されませんでした');
+      // フォールバック: YouTube Music の内部 API を page context 経由で試行する
+      try {
+        log('フォールバック: YouTube Music 内部APIでプレイリストを作成します (playlist/create)');
+        const pageResp = await callYTMusicAPI('playlist/create', {
+          title: playlistName,
+          privacyStatus: 'PRIVATE',
+          description: requestBody?.snippet?.description || requestBody.snippet.description
+        });
+
+        log('内部APIのレスポンス:', JSON.stringify(pageResp, null, 2));
+
+        // injected.js 側のレスポンス構造は変動するため、いくつかの候補をチェック
+        const newPlaylistId = pageResp?.playlistId || pageResp?.id || pageResp?.result?.playlistId || pageResp?.data?.id;
+
+        if (newPlaylistId) {
+          log(`✓ 内部APIでプレイリスト作成成功: ${newPlaylistId}`);
+          return {
+            success: true,
+            playlistId: newPlaylistId,
+            playlistUrl: `https://www.youtube.com/playlist?list=${newPlaylistId}`,
+            wasOverwritten: wasOverwritten,
+            method: 'youtube_music_internal_playlist_create'
+          };
+        }
+      } catch (fallbackErr) {
+        logError(`内部APIフォールバック失敗: ${fallbackErr.message}`);
+      }
+
+      throw new Error(`YouTube API create playlist failed after trying origins. lastError=${lastErrorText}`);
     }
 
   } catch (error) {
@@ -1366,23 +1440,34 @@ const addSongsToPlaylistWithYouTubeDataAPI = async (playlistId, songs) => {
     const errors = [];
     const foundVideos = [];
 
-    let cookies = await getCookiesFromBackground();
+    let cookies = await getCookiesFromBackground().catch(() => null);
     if (!Array.isArray(cookies)) cookies = [];
-    const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
 
-    if (!sapisidCookie) {
+    let sapisid = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID')?.value;
+    if (!sapisid) {
+      try {
+        const dc = document.cookie || '';
+        const m = dc.match(/(?:^|; )(__Secure-3PAPISID|SAPISID)=([^;]+)/);
+        if (m) sapisid = m[2];
+      } catch (e) {
+        // ignore parsing errors when attempting to read document.cookie
+        log('document.cookie parse fallback failed');
+      }
+    }
+
+    if (!sapisid) {
       throw new Error('YouTubeにログインしていません');
     }
 
-    const sapisid = sapisidCookie.value;
-    const origin = 'https://www.youtube.com';
-    const timestamp = Math.floor(Date.now() / 1000);
-
-    const hashInput = `${timestamp} ${sapisid} ${origin}`;
-    const hashBuffer = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(hashInput));
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    const sapisidhash = `${timestamp}_${hashHex}`;
+    // Helper: compute SAPISIDHASH for given origin (reuse from create playlist)
+    const computeSapisidHash = async (sapisidValue, originValue) => {
+      const ts = Math.floor(Date.now() / 1000);
+      const input = `${ts} ${sapisidValue} ${originValue}`;
+      const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(input));
+      const arr = Array.from(new Uint8Array(buf));
+      const hex = arr.map(b => b.toString(16).padStart(2, '0')).join('');
+      return { sapisidhash: `${ts}_${hex}`, ts };
+    };
 
     const apiKey = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30';
 
@@ -1434,24 +1519,87 @@ const addSongsToPlaylistWithYouTubeDataAPI = async (playlistId, songs) => {
           }
         };
 
-        const response = await fetch(addUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `SAPISIDHASH ${sapisidhash}`,
-            'Content-Type': 'application/json',
-            'X-Origin': origin,
-            'X-Goog-AuthUser': '0'
-          },
-          body: JSON.stringify(requestBody),
-          credentials: 'include'
-        });
+        // Try multiple origins like in playlist create to avoid XD3 origin mismatch
+        const originCandidates = Array.from(new Set([
+          window.location?.origin || '',
+          'https://music.youtube.com',
+          'https://www.youtube.com'
+        ])).filter(Boolean);
 
-        if (response.ok) {
-          addedCount++;
-          log(`✓ 動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
-        } else {
-          const errorText = await response.text();
-          throw new Error(`YouTube API error: ${response.status} - ${errorText}`);
+        let added = false;
+        let lastErr = null;
+
+        for (const tryOrigin of originCandidates) {
+          try {
+            const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
+            const headers = {
+              'Authorization': `SAPISIDHASH ${tryHash}`,
+              'Content-Type': 'application/json',
+              'X-Origin': tryOrigin,
+              'X-Goog-AuthUser': '0'
+            };
+
+            log(`動画追加を試行: origin=${tryOrigin} videoId=${video.videoId}`);
+            log('送信ヘッダー:', headers);
+
+            const response = await fetch(addUrl, {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify(requestBody),
+              credentials: 'include'
+            });
+
+            const text = await response.text();
+            if (!response.ok) {
+              lastErr = `status=${response.status} body=${text}`;
+              logError(`動画追加でエラー: origin=${tryOrigin} - ${lastErr}`);
+              if (text && text.includes('Origin') && text.includes('XD3')) {
+                log('XD3 origin mismatch を検出、別のoriginで再試行します');
+                await wait(200);
+                continue;
+              }
+              throw new Error(lastErr);
+            }
+
+            // success
+            addedCount++;
+            log(`✓ 動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
+            added = true;
+            break;
+          } catch (err) {
+            logError(`origin=${tryOrigin} の動画追加で例外: ${err.message}`);
+            lastErr = err.message;
+            await wait(150);
+            continue;
+          }
+        }
+
+        if (!added) {
+          logError(`動画の追加に失敗しました via Data API: ${lastErr} -- フォールバックを試行します`);
+
+          // fallback: try internal API (browse/edit_playlist) via page context
+          try {
+            const actions = [{ action: 'ACTION_ADD_VIDEO', addedVideoId: video.videoId }];
+            log(`フォールバック: browse/edit_playlist を使用して videoId=${video.videoId} を追加`);
+            const pageResp = await callYTMusicAPI('browse/edit_playlist', {
+              playlistId: `VL${playlistId}`, // internal API sometimes expects VL-prefixed id
+              actions: actions
+            });
+
+            log('内部API追加レスポンス:', JSON.stringify(pageResp, null, 2));
+
+            // 成功の判定 (内部レスポンスは不安定なので緩やかに判定)
+            if (pageResp && (!pageResp.error)) {
+              addedCount++;
+              log(`✓ 内部APIフォールバックで動画追加成功: ${video.title}`);
+            } else {
+              throw new Error(`内部APIでの追加が失敗しました: ${JSON.stringify(pageResp)}`);
+            }
+
+          } catch (fallbackErr) {
+            logError(`内部APIフォールバック失敗: ${fallbackErr.message}`);
+            throw new Error(`動画の追加に失敗しました: ${lastErr}; fallbackErr=${fallbackErr.message}`);
+          }
         }
 
         if ((i + 1) % 10 === 0) {
@@ -1498,6 +1646,19 @@ const addSongsToPlaylistWithYouTubeDataAPI = async (playlistId, songs) => {
  * メッセージリスナー
  */
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // 簡易ログインチェック（popupから使用）
+  if (request && request.action === 'checkLogin') {
+    try {
+      const cookieStr = document.cookie || '';
+      const cookieNames = cookieStr.split(';').map(s => s.trim()).filter(Boolean).map(s => s.split('=')[0]);
+      const loginCookies = ['SAPISID', '__Secure-3PAPISID', 'SID', 'HSID', 'LOGIN_INFO', 'YSC'];
+      const found = cookieNames.filter(n => loginCookies.includes(n));
+      sendResponse({ loggedIn: found.length > 0, foundCookies: found });
+    } catch (e) {
+      sendResponse({ loggedIn: false, error: e.message });
+    }
+    return; // 同期応答なので終了
+  }
   if (request.action === 'ping') {
     sendResponse({ status: 'ok' });
     return false;
@@ -1571,7 +1732,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             throw new Error(`プレイリストの作成に失敗しました: ${playlistResult.error}`);
           }
 
-          log(`プレイリストに楽曲を追加中...`);
+          log('プレイリストに楽曲を追加中...');
 
           const addResult = await addSongsToPlaylistWithYouTubeDataAPI(playlistResult.playlistId, allSongs);
 
@@ -1619,7 +1780,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         chrome.runtime.sendMessage({ action: 'progress', data: { message: `楽曲を収集中... (モード: ${mode})` } });
-        let allSongs = [];
+        const allSongs = [];
         for (const channel of channels) {
           let songs = [];
           if (mode === 'latest') {

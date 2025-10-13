@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressText = document.getElementById('progressText');
   const resultsDiv = document.getElementById('results');
   const resultList = document.getElementById('resultList');
+  const showDebugCheckbox = document.getElementById('showDebug');
+  const debugOutput = document.getElementById('debugOutput');
+  const injectContentBtn = document.getElementById('injectContent');
 
   // 保存された設定を読み込む
   chrome.storage.sync.get(['songsPerChannel', 'playlistName', 'fetchMode'], (data) => {
@@ -97,6 +100,42 @@ document.addEventListener('DOMContentLoaded', () => {
   // メインの処理
   fetchButton.addEventListener('click', async () => {
     try {
+      // アクティブタブがYouTubeまたはYouTube Musicか確認
+      const tabs = await new Promise((resolve) => chrome.tabs.query({ active: true, currentWindow: true }, resolve));
+      const activeTab = tabs && tabs[0];
+      const url = activeTab?.url || '';
+      if (!/https?:\/\/(music\.)?youtube\.com/.test(url) && !/https?:\/\/www\.youtube\.com/.test(url)) {
+        showStatus('YouTube (または YouTube Music) のタブを開いてログインしてください。', 'error');
+        return;
+      }
+
+      // content script経由でより確実なログインチェックを行う
+      const loginResponse = await new Promise((resolve) => {
+        chrome.tabs.sendMessage(activeTab.id, { action: 'checkLogin' }, (resp) => {
+          resolve(resp);
+        });
+      });
+
+      if (!loginResponse) {
+        showStatus('content script がこのタブに注入されていない、または応答がありません。下の「コンテントスクリプトを注入」を押してから、ページをリロードして再試行してください。', 'error');
+        console.log('Login check response: undefined');
+        if (showDebugCheckbox && showDebugCheckbox.checked) {
+          debugOutput.classList.remove('hidden');
+          debugOutput.textContent = 'Login check response: undefined';
+        }
+        return;
+      }
+
+      if (!loginResponse.loggedIn) {
+        showStatus('YouTubeにログインしていません。YouTubeにログインしてから再度お試しください。', 'error');
+        console.log('Login check response:', loginResponse);
+        if (showDebugCheckbox && showDebugCheckbox.checked) {
+          debugOutput.classList.remove('hidden');
+          debugOutput.textContent = `Login check response: ${JSON.stringify(loginResponse, null, 2)}`;
+        }
+        return;
+      }
+
       hideStatus();
       hideProgress();
       resultsDiv.classList.add('hidden');
@@ -355,4 +394,51 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchButton.disabled = false;
     }
   });
+
+  // デバッグチェックボックスの変更ハンドラ
+  if (showDebugCheckbox) {
+    showDebugCheckbox.addEventListener('change', async (e) => {
+      if (e.target.checked) {
+        // アクティブタブに問い合わせてcookie一覧を取得
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          const tab = tabs[0];
+          if (!tab || !tab.id) return;
+          chrome.tabs.sendMessage(tab.id, { action: 'checkLogin' }, (resp) => {
+            debugOutput.classList.remove('hidden');
+            debugOutput.textContent = JSON.stringify(resp, null, 2);
+          });
+        });
+      } else {
+        debugOutput.classList.add('hidden');
+        debugOutput.textContent = '';
+      }
+    });
+  }
+
+  // コンテントスクリプト注入ボタン
+  if (injectContentBtn) {
+    injectContentBtn.addEventListener('click', async () => {
+      try {
+        const tabs = await new Promise((resolve) => chrome.tabs.query({ active: true, currentWindow: true }, resolve));
+        const tab = tabs[0];
+        if (!tab || !tab.id) {
+          showStatus('アクティブなタブが見つかりません', 'error');
+          return;
+        }
+        // MV3 の chrome.scripting API を使って content.js を注入
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        }, () => {
+          if (chrome.runtime.lastError) {
+            showStatus(`注入に失敗しました: ${chrome.runtime.lastError.message}`, 'error');
+            return;
+          }
+          showStatus('コンテントスクリプトを注入しました。ページをリロードして再試行してください。', 'success');
+        });
+      } catch (e) {
+        showStatus(`注入中にエラーが発生しました: ${e.message}`, 'error');
+      }
+    });
+  }
 });

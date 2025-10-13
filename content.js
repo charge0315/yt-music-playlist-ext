@@ -2520,16 +2520,34 @@ const fetchLatestSongs = async (songsPerChannel, playlistName, createPlaylistOpt
       }
     }
 
-    // プレイリスト作成が無効、または作成に失敗した場合は楽曲リストのみ提供
-    log('楽曲リストの準備完了。ユーザーが手動でプレイリストを作成できます。');
+    // プレイリスト作成が無効、または作成に失敗した場合は楽曲リストのみ提供（2つ目の箇所）
+    log('楽曲リストの準備完了。手動プレイリスト作成ガイドを表示します。');
 
     return {
       success: true,
       totalSongs: allSongs.length,
       songs: allSongs,
-      message: '楽曲リストが準備できました。YouTube Musicで手動でプレイリストを作成してください。',
       totalChannels: processedCount,
-      playlistName: playlistName
+      playlistName: playlistName,
+      message: `登録アーティストから${allSongs.length}曲を取得しました！手動でプレイリストを作成してください。`,
+      manualCreateGuide: {
+        title: '手動プレイリスト作成ガイド',
+        steps: [
+          '1. YouTube Music (https://music.youtube.com/) を開く',
+          '2. 左サイドバーの「ライブラリ」→「プレイリスト」を選択',
+          '3. 「新しいプレイリスト」ボタンをクリック',
+          `4. プレイリスト名に「${playlistName}」を入力`,
+          '5. 以下の楽曲を検索して追加してください:'
+        ],
+        songList: allSongs.slice(0, 20).map((song, index) => `${index + 1}. ${song.title} - ${song.channel}`),
+        searchTips: [
+          '• 楽曲名とアーティスト名で検索すると見つかりやすいです',
+          '• 一度にすべて追加せず、数曲ずつ追加することをお勧めします',
+          '• 見つからない楽曲はスキップして、後で個別に検索してください'
+        ],
+        youtubeUrls: allSongs.slice(0, 10).map(song => song.url || `https://music.youtube.com/search?q=${encodeURIComponent(song.title + ' ' + song.channel)}`)
+      },
+      details: `${processedCount}個のアーティストから楽曲情報を取得完了`
     };
 
   } catch (error) {
@@ -2648,15 +2666,33 @@ const fetchPopularSongs = async (songsPerChannel, playlistName, createPlaylistOp
     }
 
     // プレイリスト作成が無効、または作成に失敗した場合は楽曲リストのみ提供
-    log('楽曲リストの準備完了。ユーザーが手動でプレイリストを作成できます。');
+    log('楽曲リストの準備完了。手動プレイリスト作成ガイドを表示します。');
 
     return {
       success: true,
       totalSongs: allSongs.length,
       songs: allSongs,
-      message: '楽曲リストが準備できました。YouTube Musicで手動でプレイリストを作成してください。',
       totalChannels: processedCount,
-      playlistName: playlistName
+      playlistName: playlistName,
+      message: `登録アーティストから${allSongs.length}曲を取得しました！手動でプレイリストを作成してください。`,
+      manualCreateGuide: {
+        title: '手動プレイリスト作成ガイド',
+        steps: [
+          '1. YouTube Music (https://music.youtube.com/) を開く',
+          '2. 左サイドバーの「ライブラリ」→「プレイリスト」を選択',
+          '3. 「新しいプレイリスト」ボタンをクリック',
+          `4. プレイリスト名に「${playlistName}」を入力`,
+          '5. 以下の楽曲を検索して追加してください:'
+        ],
+        songList: allSongs.slice(0, 20).map((song, index) => `${index + 1}. ${song.title} - ${song.channel}`),
+        searchTips: [
+          '• 楽曲名とアーティスト名で検索すると見つかりやすいです',
+          '• 一度にすべて追加せず、数曲ずつ追加することをお勧めします',
+          '• 見つからない楽曲はスキップして、後で個別に検索してください'
+        ],
+        youtubeUrls: allSongs.slice(0, 10).map(song => song.url || `https://music.youtube.com/search?q=${encodeURIComponent(song.title + ' ' + song.channel)}`)
+      },
+      details: `${processedCount}個のアーティストから楽曲情報を取得完了`
     };
 
   } catch (error) {

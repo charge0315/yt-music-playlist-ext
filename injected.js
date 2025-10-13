@@ -277,27 +277,21 @@
 
       // エンドポイント固有の調整
       if (endpoint === 'playlist/create') {
-        // YouTube Musicのプレイリスト作成は browse/edit_playlist を使用
-        apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
+        // 実際のYouTube Musicプレイリスト作成APIを使用
+        apiUrl = `https://music.youtube.com/youtubei/v1/playlist/create?key=${apiKey}`;
         requestBody = {
           context: context,
-          actions: [{
-            action: 'ACTION_ADD_PLAYLIST',
-            playlistName: body.title || body.playlistTitle || 'New Playlist',
-            playlistDescription: body.description || '',
-            privacyStatus: 'UNLISTED'
-          }]
+          title: body.title || body.playlistTitle || 'New Playlist',
+          description: body.description || '',
+          privacyStatus: 'UNLISTED',
+          sourcePlaylistId: null
         };
       } else if (endpoint === 'playlist/delete') {
-        // プレイリスト削除も browse/edit_playlist を使用
-        apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
+        // プレイリスト削除
+        apiUrl = `https://music.youtube.com/youtubei/v1/playlist/delete?key=${apiKey}`;
         requestBody = {
           context: context,
-          playlistId: body.playlistId,
-          actions: [{
-            action: 'ACTION_DELETE_PLAYLIST',
-            playlistId: body.playlistId
-          }]
+          playlistId: body.playlistId
         };
       } else if (endpoint.startsWith('browse/get_add_to_playlist')) {
         // 動画追加用のエンドポイント調整
@@ -305,6 +299,14 @@
         requestBody = {
           context: context,
           videoId: body.videoId || body.videoIds?.[0]
+        };
+      } else if (endpoint === 'browse/edit_playlist') {
+        // プレイリスト編集（動画追加など）
+        apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
+        requestBody = {
+          context: context,
+          playlistId: body.playlistId,
+          actions: body.actions || []
         };
       }
 

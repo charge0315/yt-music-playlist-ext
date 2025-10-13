@@ -271,6 +271,56 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsDiv.insertBefore(playlistLink, resultsDiv.firstChild);
           }
 
+          // 手動プレイリスト作成ガイドを表示
+          if (response.manualCreateGuide) {
+            const manualGuideDiv = document.createElement('div');
+            manualGuideDiv.className = 'manual-guide';
+            manualGuideDiv.innerHTML = `
+              <div class="manual-guide-content">
+                <h3>${response.manualCreateGuide.title}</h3>
+                <div class="guide-steps">
+                  ${response.manualCreateGuide.steps.map(step =>
+    `<div class="guide-step">${step}</div>`
+  ).join('')}
+                </div>
+                
+                <div class="song-list-section">
+                  <h4>楽曲リスト (上位20曲):</h4>
+                  <div class="manual-song-list">
+                    ${response.manualCreateGuide.songList.map(song =>
+    `<div class="manual-song-item">${song}</div>`
+  ).join('')}
+                    ${response.songs.length > 20 ?
+    `<div class="manual-song-item more-songs">...他${response.songs.length - 20}曲</div>` : ''}
+                  </div>
+                  
+                  <div class="guide-actions">
+                    <button class="copy-song-list" onclick="
+                      const songList = ${JSON.stringify(response.manualCreateGuide.songList)};
+                      navigator.clipboard.writeText(songList.join('\\n'))
+                        .then(() => this.textContent = '楽曲リストをコピー完了！')
+                        .catch(() => this.textContent = 'コピー失敗');
+                    ">楽曲リストをコピー</button>
+                    
+                    <button class="open-youtube-music" onclick="window.open('https://music.youtube.com/library/playlists', '_blank')">
+                      YouTube Musicを開く
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="search-tips">
+                  <h4>検索のコツ:</h4>
+                  ${response.manualCreateGuide.searchTips.map(tip =>
+    `<div class="search-tip">${tip}</div>`
+  ).join('')}
+                </div>
+              </div>
+            `;
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.insertBefore(manualGuideDiv, resultsDiv.firstChild);
+          }
+
           // 楽曲リストのコピー機能を追加
           const copyButton = document.createElement('button');
           copyButton.textContent = '楽曲リストをコピー';

@@ -272,18 +272,44 @@
         console.log('[Injected] 認証ヘッダー生成エラー:', authError.message);
       }
 
-      // API URL構築 - シンプルで確実なアプローチ
-      const apiUrl = `https://music.youtube.com/youtubei/v1/${endpoint}?key=${apiKey}`;
+      // API URL構築 - YouTube Music実際のエンドポイント形式を使用
+      let apiUrl = `https://music.youtube.com/youtubei/v1/${endpoint}?key=${apiKey}`;
 
-      // プレイリスト作成の場合、特別な処理
+      // エンドポイント固有の調整
       if (endpoint === 'playlist/create') {
+        // YouTube Musicのプレイリスト作成は browse/edit_playlist を使用
+        apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
         requestBody = {
           context: context,
-          title: body.title || body.playlistTitle,
-          description: body.description || '',
-          privacyStatus: 'UNLISTED'
+          actions: [{
+            action: 'ACTION_ADD_PLAYLIST',
+            playlistName: body.title || body.playlistTitle || 'New Playlist',
+            playlistDescription: body.description || '',
+            privacyStatus: 'UNLISTED'
+          }]
+        };
+      } else if (endpoint === 'playlist/delete') {
+        // プレイリスト削除も browse/edit_playlist を使用
+        apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
+        requestBody = {
+          context: context,
+          playlistId: body.playlistId,
+          actions: [{
+            action: 'ACTION_DELETE_PLAYLIST',
+            playlistId: body.playlistId
+          }]
+        };
+      } else if (endpoint.startsWith('browse/get_add_to_playlist')) {
+        // 動画追加用のエンドポイント調整
+        apiUrl = `https://music.youtube.com/youtubei/v1/browse/get_add_to_playlist?key=${apiKey}`;
+        requestBody = {
+          context: context,
+          videoId: body.videoId || body.videoIds?.[0]
         };
       }
+
+      console.log('[Injected] 最終API URL:', apiUrl);
+      console.log('[Injected] 最終リクエストボディ:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(apiUrl, {
         method: 'POST',

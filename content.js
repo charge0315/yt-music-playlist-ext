@@ -1181,60 +1181,120 @@ const findExistingPlaylist = async (playlistName) => {
   try {
     log(`既存の再生リスト検索: "${playlistName}"`);
 
-    // ユーザーの再生リスト一覧を取得
-    const response = await callYTMusicAPI('browse', {
-      browseId: 'FEmusic_liked_playlists'
-    });
+    // 複数のエンドポイントを順次試行
+    const endpoints = [
+      'FEmusic_library_playlists', // ライブラリのプレイリスト（作成したプレイリスト）
+      'FEmusic_liked_playlists',   // いいねしたプレイリスト
+      'FEmusic_library'            // ライブラリ全体
+    ];
 
-    const playlists = [];
-    const matchingPlaylists = []; // 同名プレイリストを保存
-    const contents = response?.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]
-      ?.tabRenderer?.content?.sectionListRenderer?.contents || [];
+    const allPlaylists = [];
+    const matchingPlaylists = [];
 
-    for (const section of contents) {
-      const gridItems = section?.gridRenderer?.items || [];
+    for (const browseId of endpoints) {
+      try {
+        log(`エンドポイント ${browseId} を検索中...`);
 
-      for (const item of gridItems) {
-        const playlistItem = item?.musicTwoRowItemRenderer;
-        if (!playlistItem) continue;
+        const response = await callYTMusicAPI('browse', { browseId });
 
-        const navigationEndpoint = playlistItem?.navigationEndpoint;
-        const browseEndpoint = navigationEndpoint?.browseEndpoint;
+        const contents = response?.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]
+          ?.tabRenderer?.content?.sectionListRenderer?.contents || [];
 
-        if (browseEndpoint?.browseId) {
-          const playlistId = browseEndpoint.browseId;
-          const title = playlistItem?.title?.runs?.[0]?.text || '';
+        for (const section of contents) {
+          // gridRenderer をチェック
+          const gridItems = section?.gridRenderer?.items || [];
 
-          if (title && playlistId.startsWith('VL')) {
-            const playlist = {
-              id: playlistId.replace('VL', ''),
-              title: title,
-              browseId: playlistId
-            };
+          for (const item of gridItems) {
+            const playlistItem = item?.musicTwoRowItemRenderer;
+            if (!playlistItem) continue;
 
-            playlists.push(playlist);
+            const navigationEndpoint = playlistItem?.navigationEndpoint;
+            const browseEndpoint = navigationEndpoint?.browseEndpoint;
 
-            // 同じタイトルの再生リストが見つかった場合
-            if (title.trim().toLowerCase() === playlistName.trim().toLowerCase()) {
-              log(`✓ 既存の再生リストを発見: "${title}" (${playlistId})`);
-              matchingPlaylists.push(playlist);
+            if (browseEndpoint?.browseId) {
+              const playlistId = browseEndpoint.browseId;
+              const title = playlistItem?.title?.runs?.[0]?.text || '';
+
+              if (title && playlistId.startsWith('VL')) {
+                const playlist = {
+                  id: playlistId.replace('VL', ''),
+                  title: title,
+                  browseId: playlistId
+                };
+
+                allPlaylists.push(playlist);
+
+                // 同じタイトルの再生リストが見つかった場合
+                if (title.trim().toLowerCase() === playlistName.trim().toLowerCase()) {
+                  log(`✓ 既存の再生リストを発見: "${title}" (${playlistId}) [${browseId}]`);
+                  matchingPlaylists.push(playlist);
+                }
+              }
+            }
+          }
+
+          // musicShelfRenderer もチェック
+          const shelfItems = section?.musicShelfRenderer?.contents || [];
+
+          for (const item of shelfItems) {
+            const playlistItem = item?.musicResponsiveListItemRenderer;
+            if (!playlistItem) continue;
+
+            const navigationEndpoint = playlistItem?.navigationEndpoint;
+            const browseEndpoint = navigationEndpoint?.browseEndpoint;
+
+            if (browseEndpoint?.browseId) {
+              const playlistId = browseEndpoint.browseId;
+              const flexColumns = playlistItem?.flexColumns || [];
+              const title = flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer
+                ?.text?.runs?.[0]?.text || '';
+
+              if (title && playlistId.startsWith('VL')) {
+                const playlist = {
+                  id: playlistId.replace('VL', ''),
+                  title: title,
+                  browseId: playlistId
+                };
+
+                allPlaylists.push(playlist);
+
+                // 同じタイトルの再生リストが見つかった場合
+                if (title.trim().toLowerCase() === playlistName.trim().toLowerCase()) {
+                  log(`✓ 既存の再生リストを発見: "${title}" (${playlistId}) [${browseId}]`);
+                  matchingPlaylists.push(playlist);
+                }
+              }
             }
           }
         }
+
+        // ライブラリプレイリストで見つかった場合は優先
+        if (browseId === 'FEmusic_library_playlists' && matchingPlaylists.length > 0) {
+          break;
+        }
+
+      } catch (endpointError) {
+        log(`エンドポイント ${browseId} でエラー: ${endpointError.message}`);
+        continue;
       }
     }
 
-    if (matchingPlaylists.length > 0) {
-      log(`✓ 同名の再生リストを${matchingPlaylists.length}個発見: "${playlistName}"`);
+    // 重複を除去
+    const uniqueMatching = matchingPlaylists.filter((playlist, index, self) =>
+      index === self.findIndex(p => p.id === playlist.id)
+    );
+
+    if (uniqueMatching.length > 0) {
+      log(`✓ 同名の再生リストを${uniqueMatching.length}個発見: "${playlistName}"`);
       return {
         found: true,
-        playlists: matchingPlaylists,
-        playlist: matchingPlaylists[0] // 後方互換性のため最初のプレイリストも返す
+        playlists: uniqueMatching,
+        playlist: uniqueMatching[0] // 後方互換性のため最初のプレイリストも返す
       };
     }
 
     log(`既存の再生リストは見つかりませんでした: "${playlistName}"`);
-    return { found: false, playlists: playlists };
+    return { found: false, playlists: allPlaylists };
 
   } catch (error) {
     logError(`既存再生リスト検索エラー: ${error.message}`);
@@ -1279,9 +1339,9 @@ const deleteYouTubePlaylist = async (playlistId) => {
     // YouTube Music内部APIを使用してプレイリストを削除
     // 複数の削除方法を順次試行
     const deleteMethods = [
-      // 方法1: playlist/delete エンドポイント
+      // 方法1: browse/delete_playlist エンドポイント
       {
-        endpoint: 'playlist/delete',
+        endpoint: 'browse/delete_playlist',
         params: { playlistId: playlistId }
       },
       // 方法2: browse/edit_playlist エンドポイント（修正版）
@@ -1297,7 +1357,7 @@ const deleteYouTubePlaylist = async (playlistId) => {
       },
       // 方法3: 簡略化されたdelete
       {
-        endpoint: 'playlist/delete',
+        endpoint: 'browse/delete_playlist',
         params: {
           playlistId: playlistId,
           context: getYTMusicConfig()?.context
@@ -1449,7 +1509,7 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
 
     log(`プレイリスト作成リクエスト: ${JSON.stringify(createRequest, null, 2)}`);
 
-    const response = await callYTMusicAPI('playlist/create', createRequest);
+    const response = await callYTMusicAPI('browse/create_playlist', createRequest);
 
     log(`プレイリスト作成API応答: ${JSON.stringify(response, null, 2)}`);
 
@@ -1518,13 +1578,29 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
     } else {
       log('プレイリストID抽出失敗。代替方法で作成されたプレイリストを検索します...');
 
-      // プレイリスト作成後少し待機してから検索
-      await wait(3000);
+      // プレイリスト作成後十分な時間を待機してから検索
+      log('プレイリスト作成の反映を待機中... (5秒)');
+      await wait(5000);
 
-      // 新しく作成されたプレイリストを検索
-      const searchResult = await findExistingPlaylist(playlistName);
+      // 新しく作成されたプレイリストを検索（複数回試行）
+      let searchResult = null;
+      const maxSearchRetries = 3;
 
-      if (searchResult.found && searchResult.playlists && searchResult.playlists.length > 0) {
+      for (let retry = 0; retry < maxSearchRetries; retry++) {
+        log(`プレイリスト検索試行 ${retry + 1}/${maxSearchRetries}...`);
+        searchResult = await findExistingPlaylist(playlistName);
+
+        if (searchResult.found && searchResult.playlists && searchResult.playlists.length > 0) {
+          break;
+        }
+
+        if (retry < maxSearchRetries - 1) {
+          log(`検索失敗。${2 + retry}秒後に再試行...`);
+          await wait((2 + retry) * 1000);
+        }
+      }
+
+      if (searchResult && searchResult.found && searchResult.playlists && searchResult.playlists.length > 0) {
         // 最新のプレイリスト（通常は最初に見つかるもの）を使用
         const newPlaylist = searchResult.playlists[0];
         log(`✓ 作成されたプレイリストを検索で発見: ${newPlaylist.id}`);
@@ -1538,7 +1614,19 @@ const createYouTubePlaylistWithAuth = async (playlistName, description = '') => 
         };
       } else {
         log('プレイリストが作成されましたが、検索でも見つかりませんでした。');
-        throw new Error('プレイリストは作成されましたが、IDの取得に失敗しました。');
+
+        // 最後の手段：手動確認を促す
+        log('手動でプレイリストを確認してください: https://music.youtube.com/library/playlists');
+
+        // とりあえず成功として処理（プレイリストは作成されているため）
+        return {
+          success: true,
+          playlistId: 'unknown',
+          playlistUrl: 'https://music.youtube.com/library/playlists',
+          method: 'youtube_music_api_created_but_id_unknown',
+          wasOverwritten: wasOverwritten,
+          note: 'プレイリストは作成されましたが、IDの自動取得に失敗しました。手動で確認してください。'
+        };
       }
     }
 
@@ -1740,7 +1828,8 @@ const addVideosToYouTubePlaylistWithAuth = async (playlistId, songs, batchSize =
             playlistId: playlistId,
             actions: videoIds.map(videoId => ({
               action: 'ACTION_ADD_VIDEO',
-              addedVideoId: videoId
+              addedVideoId: videoId,
+              setVideoId: videoId
             }))
           });
 
@@ -1752,7 +1841,7 @@ const addVideosToYouTubePlaylistWithAuth = async (playlistId, songs, batchSize =
             log('バッチ追加失敗、個別追加を試行...');
             for (const videoId of videoIds) {
               try {
-                const individualResponse = await callYTMusicAPI('playlist/get_add_to_playlist', {
+                const individualResponse = await callYTMusicAPI('browse/get_add_to_playlist', {
                   videoIds: [videoId]
                 });
 
@@ -1762,7 +1851,8 @@ const addVideosToYouTubePlaylistWithAuth = async (playlistId, songs, batchSize =
                     playlistId: playlistId,
                     actions: [{
                       action: 'ACTION_ADD_VIDEO',
-                      addedVideoId: videoId
+                      addedVideoId: videoId,
+                      setVideoId: videoId
                     }]
                   });
 

@@ -2143,7 +2143,7 @@ const addVideosToYouTubePlaylist = async (playlistId, songs, batchSize = 20) => 
         let response = null;
 
         try {
-          log(`APIエンドポイント試行: browse/edit_playlist`);
+          log('APIエンドポイント試行: browse/edit_playlist');
 
           response = await callYTMusicAPI('browse/edit_playlist', {
             playlistId: playlistId,
@@ -2154,7 +2154,7 @@ const addVideosToYouTubePlaylist = async (playlistId, songs, batchSize = 20) => 
           });
 
           if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
-            log(`✓ browse/edit_playlist で成功`);
+            log('✓ browse/edit_playlist で成功');
           } else {
             throw new Error(`レスポンスが不正: ${response?.status || 'Unknown error'}`);
           }
@@ -2575,70 +2575,11 @@ const fetchPopularSongs = async (songsPerChannel, playlistName, createPlaylistOp
     log(`合計${allSongs.length}曲を取得しました`);
 
     // プレイリスト作成オプションが有効な場合
+    // 注意: YouTube API認証エラーが発生するため、現在は手動作成ガイドを表示
     if (createPlaylistOption) {
-      try {
-        log('YouTube再生リストの作成を開始...');
-
-        // YouTube再生リストを作成
-        const createResult = await createYouTubePlaylist(
-          playlistName,
-          `アーティストの人気楽曲 (${new Date().toLocaleDateString('ja-JP')})`
-        );
-
-        if (createResult.success) {
-          log(`✓ YouTube再生リスト作成成功: ${createResult.playlistId}`);
-
-          // 動画を検索して追加
-          const addResult = await addVideosToYouTubePlaylist(createResult.playlistId, allSongs);
-
-          if (addResult.success) {
-            const overwriteText = createResult.wasOverwritten ? '（既存を上書き）' : '';
-            log(`✓ YouTube再生リスト作成完了: ${addResult.addedCount}/${addResult.totalFound}動画を追加`);
-
-            return {
-              success: true,
-              totalSongs: allSongs.length,
-              songs: allSongs,
-              playlist: {
-                id: createResult.playlistId,
-                url: createResult.playlistUrl,
-                name: playlistName,
-                addedVideos: addResult.addedCount,
-                totalFound: addResult.totalFound,
-                skipped: addResult.skippedCount,
-                wasOverwritten: createResult.wasOverwritten
-              },
-              message: `YouTube再生リスト "${playlistName}" を作成${overwriteText}し、${addResult.addedCount}個の動画を追加しました！`,
-              totalChannels: processedCount,
-              playlistName: playlistName,
-              details: `検索結果: ${addResult.totalFound}/${allSongs.length}個の動画を発見, ${addResult.skippedCount}個をスキップ`
-            };
-          } else {
-            logError(`動画追加に失敗: ${addResult.error}`);
-            const overwriteText = createResult.wasOverwritten ? '（既存を上書き）' : '';
-            return {
-              success: true,
-              totalSongs: allSongs.length,
-              songs: allSongs,
-              playlist: {
-                id: createResult.playlistId,
-                url: createResult.playlistUrl,
-                name: playlistName,
-                addedVideos: 0,
-                wasOverwritten: createResult.wasOverwritten
-              },
-              message: `YouTube再生リスト "${playlistName}" は作成${overwriteText}されましたが、動画の追加に失敗しました。`,
-              totalChannels: processedCount,
-              playlistName: playlistName,
-              warning: addResult.error
-            };
-          }
-        } else {
-          logError(`YouTube再生リスト作成に失敗: ${createResult.error}`);
-        }
-      } catch (error) {
-        logError(`YouTube再生リスト作成処理でエラー: ${error.message}`);
-      }
+      log('⚠️ YouTube API認証の問題により、自動プレイリスト作成は現在利用できません');
+      log('手動プレイリスト作成ガイドを表示します');
+      // 自動作成を試みず、直接手動ガイドにフォールバック
     }
 
     // プレイリスト作成が無効、または作成に失敗した場合は楽曲リストのみ提供

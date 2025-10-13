@@ -1417,8 +1417,13 @@ const createYouTubePlaylistV3 = async (playlistName, description = '') => {
   try {
     log(`YouTube Data API v3でプレイリスト作成開始: "${playlistName}"`);
 
+    // chrome.cookies API権限チェック
+    if (!chrome.cookies || typeof chrome.cookies.getAll !== 'function') {
+      throw new Error('拡張機能のcookies権限がありません。manifest.jsonのpermissionsに"cookies"を追加してください。');
+    }
     // YouTubeのCookieからアクセストークンを取得
-    const cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    let cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    if (!Array.isArray(cookies)) cookies = [];
     log(`YouTube Cookieを${cookies.length}個取得しました`);
 
     // SAPISIDトークンを取得
@@ -1579,8 +1584,13 @@ const addVideosToYouTubePlaylistV3 = async (playlistId, songs, batchSize = 20) =
     const errors = [];
     const foundVideos = [];
 
+    // chrome.cookies API権限チェック
+    if (!chrome.cookies || typeof chrome.cookies.getAll !== 'function') {
+      throw new Error('拡張機能のcookies権限がありません。manifest.jsonのpermissionsに"cookies"を追加してください。');
+    }
     // YouTubeのCookieからアクセストークンを取得
-    const cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    let cookies = await chrome.cookies.getAll({ domain: '.youtube.com' });
+    if (!Array.isArray(cookies)) cookies = [];
     const sapisidCookie = cookies.find(c => c.name === 'SAPISID' || c.name === '__Secure-3PAPISID');
 
     if (!sapisidCookie) {
@@ -2800,9 +2810,21 @@ const fetchLatestSongs = async (songsPerChannel, playlistName, createPlaylistOpt
           }
         } else {
           logError(`YouTube再生リスト作成に失敗: ${createResult.error}`);
+          return {
+            success: false,
+            error: `YouTube再生リスト作成に失敗: ${createResult.error}`,
+            playlistName,
+            songs: allSongs
+          };
         }
       } catch (error) {
         logError(`YouTube再生リスト作成処理でエラー: ${error.message}`);
+        return {
+          success: false,
+          error: `YouTube再生リスト作成処理でエラー: ${error.message}`,
+          playlistName,
+          songs: allSongs
+        };
       }
     }
 

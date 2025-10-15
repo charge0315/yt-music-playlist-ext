@@ -1,6 +1,6 @@
 // YouTube Music用のコンテンツスクリプト
 
-(function() {
+(function () {
   // スクリプトが複数回実行されるのを防ぐためのフラグ
   if (window.contentScriptInjected) {
     return;
@@ -807,7 +807,7 @@
   const getLatestSongsFromChannel = async (channel, count = 3) => {
     log(`${channel.name}から最新${count}曲を取得中...`);
     try {
-    // channel.id を使用（browseId と同じ値のはず）
+      // channel.id を使用（browseId と同じ値のはず）
       const browseId = channel.id || channel.browseId;
       const response = await callYTMusicAPI('browse', { browseId: browseId });
 
@@ -853,14 +853,14 @@
           for (const item of items) {
             const songData = item.musicResponsiveListItemRenderer || item.musicTwoRowItemRenderer;
             if (songData) {
-            // videoId の取得を複数のパスで試行
+              // videoId の取得を複数のパスで試行
               const videoId = songData.playlistItemData?.videoId ||
-                           songData.navigationEndpoint?.watchEndpoint?.videoId ||
-                           songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
+                songData.navigationEndpoint?.watchEndpoint?.videoId ||
+                songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
 
               // タイトルの取得
               const title = songData.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
-                         songData.title?.runs?.[0]?.text;
+                songData.title?.runs?.[0]?.text;
 
               if (videoId && title) {
                 songs.push({
@@ -921,11 +921,11 @@
               const songData = item.musicResponsiveListItemRenderer || item.musicTwoRowItemRenderer;
               if (songData) {
                 const videoId = songData.playlistItemData?.videoId ||
-                             songData.navigationEndpoint?.watchEndpoint?.videoId ||
-                             songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
+                  songData.navigationEndpoint?.watchEndpoint?.videoId ||
+                  songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
 
                 const title = songData.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
-                           songData.title?.runs?.[0]?.text;
+                  songData.title?.runs?.[0]?.text;
 
                 if (videoId && title) {
                   songs.push({
@@ -953,29 +953,6 @@
       return [];
     }
   };
-
-  /**
- * 再生回数の文字列を数値に変換
- * @param {string} str - "1.2M" や "500K" のような文字列
- * @returns {number} - 数値
- */
-  const parseViewCountString = (str) => {
-    if (!str) return 0;
-    const multipliers = {
-      'K': 1000,
-      'M': 1000000,
-      'B': 1000000000
-    };
-
-    const match = str.match(/([\d.]+)([KMB])?/);
-    if (!match) return 0;
-
-    const number = parseFloat(match[1]);
-    const multiplier = multipliers[match[2]] || 1;
-
-    return Math.floor(number * multiplier);
-  };
-
   /**
  * YouTubeでアーティスト名とタイトルから動画を検索
  */
@@ -1150,31 +1127,6 @@
     }
   };
 
-  /**
- * 再生リストを削除
- */
-  const deletePlaylist = async (playlistId) => {
-    try {
-      log(`再生リスト削除中: ${playlistId}`);
-      const response = await callYTMusicAPI('playlist/delete', {
-        playlistId: playlistId
-      });
-
-      if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
-        log(`✓ 再生リスト削除成功: ${playlistId}`);
-        return { success: true };
-      } else {
-        throw new Error('再生リスト削除に失敗しました');
-      }
-
-    } catch (error) {
-      logError(`再生リスト削除エラー: ${error.message}`);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  };
 
   /**
  * YouTube APIでプレイリストを削除
@@ -1392,7 +1344,7 @@
       }
 
       if (!data) {
-      // 最後のエラーをログ
+        // 最後のエラーをログ
         logError(`YouTube Data API create failed for all origins. lastError=${lastErrorText}`);
 
         // フォールバック: YouTube Music の内部 API を page context 経由で試行する
@@ -1653,7 +1605,7 @@
  * メッセージリスナー
  */
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // 簡易ログインチェック（popupから使用）
+    // 簡易ログインチェック（popupから使用）
     if (request && request.action === 'checkLogin') {
       try {
         const cookieStr = document.cookie || '';

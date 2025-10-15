@@ -117,24 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!loginResponse) {
         showStatus('content script がこのタブに注入されていない、または応答がありません。ページをリロードして再試行してください。', 'error');
         console.log('Login check response: undefined');
-<<<<<<< HEAD
-        debugOutput.classList.remove('hidden');
-        debugOutput.textContent = 'Login check response: undefined';
-=======
-        // ...existing code...
->>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
         return;
       }
 
       if (!loginResponse.loggedIn) {
         showStatus('YouTubeにログインしていません。YouTubeにログインしてから再度お試しください。', 'error');
         console.log('Login check response:', loginResponse);
-<<<<<<< HEAD
-        debugOutput.classList.remove('hidden');
-        debugOutput.textContent = `Login check response: ${JSON.stringify(loginResponse, null, 2)}`;
-=======
-        // ...existing code...
->>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
         return;
       }
 
@@ -233,18 +221,18 @@ document.addEventListener('DOMContentLoaded', () => {
               <h3>🔐 手動作成手順</h3>
               <div class="instructions-list">
                 ${response.playlist.instructions.map(instruction =>
-    `<p>${instruction}</p>`
-  ).join('')}
+              `<p>${instruction}</p>`
+            ).join('')}
               </div>
               ${response.playlist.songList ? `
                 <div class="song-list-for-manual">
                   <h4>追加する楽曲:</h4>
                   <div class="manual-song-list">
                     ${response.playlist.songList.slice(0, 10).map(song =>
-    `<div class="manual-song-item">${song}</div>`
-  ).join('')}
+              `<div class="manual-song-item">${song}</div>`
+            ).join('')}
                     ${response.playlist.songList.length > 10 ?
-    `<div class="manual-song-item">...他${response.playlist.songList.length - 10}曲</div>` : ''}
+                  `<div class="manual-song-item">...他${response.playlist.songList.length - 10}曲</div>` : ''}
                   </div>
                   <button class="copy-song-list" onclick="
                     navigator.clipboard.writeText('${response.playlist.songList.join('\\n')}')
@@ -282,9 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
                   <h4>🔧 手動追加が必要です</h4>
                   <div class="manual-instructions">
                     ${response.playlist.manualAddInstructions ?
-    response.playlist.manualAddInstructions.map(instruction =>
-      `<p>${instruction}</p>`
-    ).join('') : ''}
+                  response.playlist.manualAddInstructions.map(instruction =>
+                    `<p>${instruction}</p>`
+                  ).join('') : ''}
                   </div>
                   
                   ${response.playlist.videoList ? `
@@ -292,10 +280,10 @@ document.addEventListener('DOMContentLoaded', () => {
                       <h5>追加する動画一覧:</h5>
                       <div class="video-list">
                         ${response.playlist.videoList.slice(0, 10).map(video =>
-    `<div class="video-item">${video}</div>`
-  ).join('')}
+                    `<div class="video-item">${video}</div>`
+                  ).join('')}
                         ${response.playlist.videoList.length > 10 ?
-    `<div class="video-item">...他${response.playlist.videoList.length - 10}個</div>` : ''}
+                    `<div class="video-item">...他${response.playlist.videoList.length - 10}個</div>` : ''}
                       </div>
                       <button class="copy-video-list" onclick="
                         navigator.clipboard.writeText('${response.playlist.videoList.join('\\n')}')
@@ -321,18 +309,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>${response.manualCreateGuide.title}</h3>
                 <div class="guide-steps">
                   ${response.manualCreateGuide.steps.map(step =>
-    `<div class="guide-step">${step}</div>`
-  ).join('')}
+              `<div class="guide-step">${step}</div>`
+            ).join('')}
                 </div>
                 
                 <div class="song-list-section">
                   <h4>楽曲リスト (上位20曲):</h4>
                   <div class="manual-song-list">
                     ${response.manualCreateGuide.songList.map(song =>
-    `<div class="manual-song-item">${song}</div>`
-  ).join('')}
+              `<div class="manual-song-item">${song}</div>`
+            ).join('')}
                     ${response.songs.length > 20 ?
-    `<div class="manual-song-item more-songs">...他${response.songs.length - 20}曲</div>` : ''}
+                `<div class="manual-song-item more-songs">...他${response.songs.length - 20}曲</div>` : ''}
                   </div>
                   
                   <div class="guide-actions">
@@ -352,8 +340,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="search-tips">
                   <h4>検索のコツ:</h4>
                   ${response.manualCreateGuide.searchTips.map(tip =>
-    `<div class="search-tip">${tip}</div>`
-  ).join('')}
+                  `<div class="search-tip">${tip}</div>`
+                ).join('')}
                 </div>
               </div>
             `;
@@ -396,9 +384,4 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchButton.disabled = false;
     }
   });
-<<<<<<< HEAD
-=======
-
-  // ...existing code...
->>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
 });

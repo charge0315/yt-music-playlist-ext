@@ -1,5 +1,11 @@
 // YouTube Music用のコンテンツスクリプト
 
+// スクリプトが複数回実行されるのを防ぐためのフラグ
+if (window.contentScriptInjected) {
+  return;
+}
+window.contentScriptInjected = true;
+
 /**
  * バックグラウンドにログを送信
  */
@@ -974,9 +980,9 @@ const parseViewCountString = (str) => {
  */
 const searchYouTubeVideo = async (artist, title) => {
   try {
-    const sanitizedArtist = artist.replace(/[^\w\s]/g, '');
-    const sanitizedTitle = title.replace(/[^\w\s]/g, '');
-    const query = `${sanitizedArtist} ${sanitizedTitle}`;
+    const sanitizedArtist = artist.replace(/[^\p{L}\p{N}\s]/gu, '');
+    const sanitizedTitle = title.replace(/[^\p{L}\p{N}\s]/gu, '');
+    const query = `${sanitizedArtist} ${sanitizedTitle}`.trim();
     log(`YouTube検索: "${query}"`);
 
     const searchResponse = await callYTMusicAPI('search', {
@@ -1582,7 +1588,7 @@ const addSongsToPlaylistWithYouTubeDataAPI = async (playlistId, songs) => {
             const actions = [{ action: 'ACTION_ADD_VIDEO', addedVideoId: video.videoId }];
             log(`フォールバック: browse/edit_playlist を使用して videoId=${video.videoId} を追加`);
             const pageResp = await callYTMusicAPI('browse/edit_playlist', {
-              playlistId: `VL${playlistId}`, // internal API sometimes expects VL-prefixed id
+              playlistId: playlistId, // internal API sometimes expects VL-prefixed id
               actions: actions
             });
 

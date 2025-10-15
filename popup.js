@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressText = document.getElementById('progressText');
   const resultsDiv = document.getElementById('results');
   const resultList = document.getElementById('resultList');
-  const debugOutput = document.getElementById('debugOutput');
+  // ...existing code...
 
   // 保存された設定を読み込む
   chrome.storage.sync.get(['songsPerChannel', 'playlistName', 'fetchMode'], (data) => {
@@ -117,16 +117,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!loginResponse) {
         showStatus('content script がこのタブに注入されていない、または応答がありません。ページをリロードして再試行してください。', 'error');
         console.log('Login check response: undefined');
+<<<<<<< HEAD
         debugOutput.classList.remove('hidden');
         debugOutput.textContent = 'Login check response: undefined';
+=======
+        // ...existing code...
+>>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
         return;
       }
 
       if (!loginResponse.loggedIn) {
         showStatus('YouTubeにログインしていません。YouTubeにログインしてから再度お試しください。', 'error');
         console.log('Login check response:', loginResponse);
+<<<<<<< HEAD
         debugOutput.classList.remove('hidden');
         debugOutput.textContent = `Login check response: ${JSON.stringify(loginResponse, null, 2)}`;
+=======
+        // ...existing code...
+>>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
         return;
       }
 
@@ -388,4 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchButton.disabled = false;
     }
   });
+<<<<<<< HEAD
+=======
+
+  // ...existing code...
+>>>>>>> e19537a (不要なデバッグ解析用ファイルの一括削除とUI整理)
 });

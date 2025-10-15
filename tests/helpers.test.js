@@ -1,3 +1,4 @@
+/* eslint-env jest */
 /**
  * Tests for helper functions
  */

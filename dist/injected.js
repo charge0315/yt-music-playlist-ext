@@ -266,7 +266,13 @@
 
         // 追加の認証ヘッダー
         headers['X-YouTube-Client-Name'] = '67';
-        headers['X-YouTube-Client-Version'] = '1.20251006.03.00';
+        // Prefer clientVersion from context when available so requests look like the UI's
+        try {
+          const clientVersionFromContext = context && context.client && context.client.clientVersion;
+          headers['X-YouTube-Client-Version'] = clientVersionFromContext ? clientVersionFromContext : '1.20251006.03.00';
+        } catch (e) {
+          headers['X-YouTube-Client-Version'] = '1.20251006.03.00';
+        }
 
       } catch (authError) {
         console.log('[Injected] 認証ヘッダー生成エラー:', authError.message);
@@ -307,15 +313,36 @@
         // プレイリスト編集（動画追加など）
         apiUrl = `https://music.youtube.com/youtubei/v1/browse/edit_playlist?key=${apiKey}`;
 
-        // actionsが正しい形式か確認
-        const actions = body.actions || [];
+        // actionsが正しい形式か確認および補完
+        const rawActions = body.actions || [];
+        const enrichedActions = (rawActions || []).map(a => ({
+          action: a.action,
+          addedVideoId: a.addedVideoId || a.addedVideoId,
+          dedupeOption: a.dedupeOption || 'DEDUPE_OPTION_CHECK',
+          addedVideoPositionIfManualSort: (typeof a.addedVideoPositionIfManualSort === 'number') ? a.addedVideoPositionIfManualSort : 0,
+          ...(a.params ? { params: a.params } : {})
+        }));
+
+        // playlistId 正規化（VL プレフィックスの補完/除去はページ側で試行）
+        let pid = body.playlistId || '';
+        if (typeof pid === 'string' && !pid) pid = '';
+
+        // params のデフォルト（UIのリクエストで見られるもの）
+        const editParams = (body && body.params) ? body.params : 'YAE%3D';
+
+        // 最終的な requestBody を構築
         requestBody = {
           context: context,
-          playlistId: body.playlistId,
-          actions: actions
+          playlistId: pid,
+          actions: enrichedActions,
+          params: editParams,
+          // include clickTracking if caller provided it (UI requests often include this)
+          ...(body && body.clickTracking ? { clickTracking: body.clickTracking } : {}),
+          // ルートレベルの dedupeOption を含める場合があるため、渡されたものを透過的に追加
+          ...(body && body.dedupeOption ? { dedupeOption: body.dedupeOption } : {})
         };
 
-        console.log('[Injected] browse/edit_playlist actions:', JSON.stringify(actions, null, 2));
+        console.log('[Injected] browse/edit_playlist actions (enriched):', JSON.stringify(enrichedActions, null, 2));
       } else if (endpoint === 'playlist/get_add_to_playlist' ||
                  endpoint === 'browse/add_to_playlist' ||
                  endpoint === 'playlist/add_videos') {
@@ -341,7 +368,30 @@
       }
 
       console.log('[Injected] 最終API URL:', apiUrl);
-      console.log('[Injected] 最終リクエストボディ:', JSON.stringify(requestBody, null, 2));
+      try {
+        console.log('[Injected] 最終送信ヘッダー (raw):', JSON.stringify(headers));
+      } catch (e) {
+        console.log('[Injected] 最終送信ヘッダー: (非表示)');
+      }
+      try {
+        console.log('[Injected] 最終リクエストボディ (raw):', JSON.stringify(requestBody, null, 2));
+      } catch (e) {
+        console.log('[Injected] 最終リクエストボディ: (非表示)');
+      }
+
+      // Temporary debug aid: expose last request for easy inspection from page console
+      try {
+        // Expose last request for debugging. Keep fields present so user can copy full payload.
+        const lastReq = { apiUrl, headers, requestBody };
+        try {
+          Object.defineProperty(window, '__YTMUSIC_LAST_REQUEST__', { value: lastReq, configurable: true, writable: true });
+        } catch (e) {
+          // fallback assignment if defineProperty fails
+          window.__YTMUSIC_LAST_REQUEST__ = lastReq;
+        }
+      } catch (e) {
+        // ignore
+      }
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -353,6 +403,23 @@
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[Injected] API呼び出し失敗:', response.status, errorText);
+
+        // Content Scriptが診断できるよう、エラー時にヘッダーとボディを含めて返す
+        document.dispatchEvent(new CustomEvent('YTMUSIC_API_RESPONSE', {
+          detail: {
+            requestId: requestId,
+            success: false,
+            error: `status=${response.status} - ${errorText}`,
+            debug: {
+              apiUrl: apiUrl,
+              headers: headers,
+              requestBody: requestBody,
+              status: response.status,
+              responseText: errorText
+            }
+          }
+        }));
+
         throw new Error(`API呼び出しに失敗: ${response.status} - ${errorText}`);
       }
 
@@ -424,7 +491,13 @@
 
       // 追加の認証ヘッダー
       headers['X-YouTube-Client-Name'] = '67';
-      headers['X-YouTube-Client-Version'] = '1.20251006.03.00';
+      try {
+        // try to grab a client version from page ytcfg or context if available
+        const clientVersion = (window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT') && window.ytcfg.get('INNERTUBE_CONTEXT').client && window.ytcfg.get('INNERTUBE_CONTEXT').client.clientVersion) || '1.20251006.03.00';
+        headers['X-YouTube-Client-Version'] = clientVersion;
+      } catch (e) {
+        headers['X-YouTube-Client-Version'] = '1.20251006.03.00';
+      }
 
       // Content Scriptに認証ヘッダーを返送
       document.dispatchEvent(new CustomEvent('YTMUSIC_AUTH_HEADERS_RESPONSE', {

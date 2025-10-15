@@ -117,7 +117,7 @@ function summarize(entries) {
   }
 
   const summary = {};
-  failed.forEach((f, idx) => {
+  failed.forEach((f) => {
     const pd = f.request && f.request.postData;
     const d = diff(succeedPd, pd);
     d.forEach(dd => {

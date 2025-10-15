@@ -22,31 +22,49 @@
   - Content: Inspect on YouTube Music page
 - **Extension Load:** Load unpacked from `dist/` in Chrome extensions page.
 
-## 📦 Project Conventions
-- All API calls use SAPISID authentication; see `injected.js` for details.
-- Playlist creation uses smart duplicate detection and fallback naming (timestamped if needed).
-- Rate limiting: 500ms delay per channel to avoid account lock.
-- Error handling: Automatic fallback and recovery for API/DOM failures.
-- Test files are in `tests/` and use Jest.
-- Use `localStorage.setItem('ytm-playlist-debug', 'true')` for verbose logging.
+```markdown
+# `copilot-instructions.md` — AI エージェント向けの短い手引き（日本語）
 
-## 🔗 Integration Points
-- Relies on YouTube Music internal API (`youtubei/v1/*`).
-- No official API; DOM and API structures may change—code defensively.
-- External references: [ytmusicapi](https://github.com/sigma67/ytmusicapi) for API understanding.
+## 概要（プロジェクトの大局）
+- このリポジトリは YouTube Music の内部 API (InnerTube) を使ってプレイリストを自動作成する Chrome 拡張（Manifest V3）です。
+- 主要コンポーネント:
+  - `background.js` — バックグラウンド処理、API 呼び出しの中継
+  - `content.js` — YouTube Music ページ上でのチャンネル/楽曲取得ロジック
+  - `injected.js` — ページコンテキストへ注入し SAPISID 認証や直接 API 呼び出しを行う
+  - `popup.html` / `popup.js` — ユーザー設定と操作トリガー（ポップアップ UI）
+  - `utils.js` — リトライ、レート制御、汎用ユーティリティ
+- データフロー（簡潔）: ユーザー操作 → 登録チャンネル取得 → 楽曲取得 → プレイリスト作成/編集（`browse/edit_playlist` を優先）
 
-## 📝 Examples & Patterns
-- See `content.js` for channel/song fetch logic and playlist creation flow.
-- See `injected.js` for authentication and direct API calls.
-- See `popup.js` for UI event handling and state management.
-- Utility patterns: Retry, fallback, and error recovery in `utils.js`.
+## 開発ワークフロー（すぐ使えるコマンド）
+- 依存インストール: `npm install`
+- ビルド: `npm run build`（出力先: `dist/`）
+- テスト: `npm test` / `npm run test:watch` / `npm run test:coverage`（Jest）
+- Lint/整形: `npm run lint` / `npm run lint:fix` / `npm run format`
+- デバッグ:
+  - ポップアップ: アイコンを右クリック → 検証
+  - バックグラウンド: `chrome://extensions/` → Service Worker を開く
+  - コンテントスクリプト: YouTube Music ページで DevTools を使う
 
-## ⚠️ Limitations & Known Issues
-- Only works on Chrome/Chromium browsers.
-- Uses unofficial API—subject to breakage.
-- Rate limits and region restrictions apply.
-- DOM selectors and API endpoints may require updates if YouTube Music changes.
+## プロジェクト固有の注意点
+- 認証: すべての内部 API 呼び出しは SAPISID 認証を用いる（`injected.js` を参照）。
+- フォールバック: プレイリスト作成は重複検知→タイムスタンプ付与などのフォールバックを持つ。
+- レート制御: チャンネル処理間に約 500ms の間隔を設ける設計になっている。
+- ロギング: 詳細ログは `localStorage.setItem('ytm-playlist-debug','true')` で有効化可能。
+- テスト: `tests/` にユニットテスト（Jest）がある。
+
+## 良く見るファイルとパターン（参照先）
+- チャンネル・楽曲取得とプレイリストロジック: `content.js`
+- 認証・直接 API 呼び出し: `injected.js`
+- ポップアップ UI とイベント処理: `popup.js`
+- 共通ユーティリティ（リトライ/フォールバック等）: `utils.js`
+
+## 制限事項 / 既知のリスク
+- Chrome / Chromium 系ブラウザ専用。
+- 非公式な内部 API を利用しているため、YouTube 側の変更で動作が崩れる可能性がある。
+- レート制限や地域制限の影響を受ける。
 
 ---
 
-**Edit this file to keep agent instructions up to date with project changes.**
+このファイルは簡潔に保ち、実装の変更があれば都度更新してください。
+
+``` 

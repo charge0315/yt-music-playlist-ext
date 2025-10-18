@@ -1,18 +1,15 @@
 // YouTube Music用のコンテンツスクリプト
 
-// グローバルに一度だけロードされるようガード
-if (window.__ytm_playlist_ext_installed) {
-  console.log('YouTube Music Playlist Extension: content script already injected - skipping duplicate load');
-} else {
-  window.__ytm_playlist_ext_installed = true;
-}
-
-(function() {
-  'use strict';
+(function () {
+  // スクリプトが複数回実行されるのを防ぐためのフラグ
+  if (window.contentScriptInjected) {
+    return;
+  }
+  window.contentScriptInjected = true;
 
   /**
-     * バックグラウンドにログを送信
-     */
+ * バックグラウンドにログを送信
+ */
   const log = (message) => {
     chrome.runtime.sendMessage({ action: 'log', message });
     console.log(message);
@@ -93,43 +90,6 @@ if (window.__ytm_playlist_ext_installed) {
           reject(new Error(response?.error || 'Cookie取得に失敗しました'));
         }
       });
-    });
-  };
-
-  /**
-   * background に OAuth トークンを要求する（chrome.identity 経由）
-   * interactive を true にすると承認ダイアログが表示される可能性があります
-   */
-  const getOAuthTokenFromBackground = (interactive = true) => {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.runtime.sendMessage({ action: 'getOAuthToken', interactive }, (response) => {
-          if (chrome.runtime.lastError) {
-            return reject(new Error(chrome.runtime.lastError.message));
-          }
-          if (!response) return resolve(null);
-          if (response.success && response.token) return resolve(response.token);
-          return resolve(null);
-        });
-      } catch (e) {
-        return reject(e);
-      }
-    });
-  };
-
-  // background に Google API を代理で呼ばせる（OAuth Bearer を付与）
-  const callGoogleApiViaBackground = (url, method = 'POST', body = null, interactive = false) => {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.runtime.sendMessage({ action: 'callGoogleApi', url, method, body, interactive }, (resp) => {
-          if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
-          if (!resp) return resolve(null);
-          if (resp.success) return resolve(resp);
-          return reject(new Error(resp.error || 'background call failed'));
-        });
-      } catch (e) {
-        reject(e);
-      }
     });
   };
 
@@ -486,11 +446,11 @@ if (window.__ytm_playlist_ext_installed) {
                 // アーティストかチャンネルの場合のみ追加（より柔軟な条件）
                 if (title &&
                   (channelId.startsWith('UC') ||
-                   channelId.startsWith('MPLA') ||
-                   channelId.startsWith('FEmusic_library_artist') ||
-                   subtitle?.includes('アーティスト') ||
-                   subtitle?.includes('Artist') ||
-                   subtitle?.includes('チャンネル'))) {
+                    channelId.startsWith('MPLA') ||
+                    channelId.startsWith('FEmusic_library_artist') ||
+                    subtitle?.includes('アーティスト') ||
+                    subtitle?.includes('Artist') ||
+                    subtitle?.includes('チャンネル'))) {
 
                   log(`アーティスト検出: ${title} (${channelId})`);
                   channels.push({
@@ -518,8 +478,8 @@ if (window.__ytm_playlist_ext_installed) {
 
                 if (title &&
                   (channelId.startsWith('UC') ||
-                   channelId.startsWith('MPLA') ||
-                   channelId.startsWith('FEmusic_library_artist'))) {
+                    channelId.startsWith('MPLA') ||
+                    channelId.startsWith('FEmusic_library_artist'))) {
 
                   log(`アーティスト検出 (responsive): ${title} (${channelId})`);
                   channels.push({
@@ -551,10 +511,10 @@ if (window.__ytm_playlist_ext_installed) {
 
               if (title &&
                 (channelId.startsWith('UC') ||
-                 channelId.startsWith('MPLA') ||
-                 channelId.startsWith('FEmusic_library_artist') ||
-                 subtitle?.includes('アーティスト') ||
-                 subtitle?.includes('Artist'))) {
+                  channelId.startsWith('MPLA') ||
+                  channelId.startsWith('FEmusic_library_artist') ||
+                  subtitle?.includes('アーティスト') ||
+                  subtitle?.includes('Artist'))) {
 
                 log(`アーティスト検出 (grid): ${title} (${channelId})`);
                 channels.push({
@@ -586,8 +546,8 @@ if (window.__ytm_playlist_ext_installed) {
 
               if (title &&
                 (channelId.startsWith('UC') ||
-                 channelId.startsWith('MPLA') ||
-                 channelId.startsWith('FEmusic_library_artist'))) {
+                  channelId.startsWith('MPLA') ||
+                  channelId.startsWith('FEmusic_library_artist'))) {
 
                 log(`アーティスト検出 (shelf): ${title} (${channelId})`);
                 channels.push({
@@ -660,10 +620,10 @@ if (window.__ytm_playlist_ext_installed) {
 
                     if (title &&
                       (channelId.startsWith('UC') ||
-                       channelId.startsWith('MPLA') ||
-                       channelId.startsWith('FEmusic_library_artist') ||
-                       subtitle?.includes('アーティスト') ||
-                       subtitle?.includes('Artist'))) {
+                        channelId.startsWith('MPLA') ||
+                        channelId.startsWith('FEmusic_library_artist') ||
+                        subtitle?.includes('アーティスト') ||
+                        subtitle?.includes('Artist'))) {
 
                       uniqueChannels.push({
                         id: channelId,
@@ -693,10 +653,10 @@ if (window.__ytm_playlist_ext_installed) {
 
                     if (title &&
                       (channelId.startsWith('UC') ||
-                       channelId.startsWith('MPLA') ||
-                       channelId.startsWith('FEmusic_library_artist') ||
-                       subtitle?.includes('アーティスト') ||
-                       subtitle?.includes('Artist'))) {
+                        channelId.startsWith('MPLA') ||
+                        channelId.startsWith('FEmusic_library_artist') ||
+                        subtitle?.includes('アーティスト') ||
+                        subtitle?.includes('Artist'))) {
 
                       uniqueChannels.push({
                         id: channelId,
@@ -780,8 +740,8 @@ if (window.__ytm_playlist_ext_installed) {
 
                 if (title &&
                   (channelId.startsWith('UC') ||
-                   channelId.startsWith('MPLA') ||
-                   channelId.startsWith('FEmusic_library_artist'))) {
+                    channelId.startsWith('MPLA') ||
+                    channelId.startsWith('FEmusic_library_artist'))) {
 
                   // 検索したアーティスト名と一致するかチェック
                   const isValidArtist = isExactArtistMatch(artistName, title);
@@ -895,12 +855,12 @@ if (window.__ytm_playlist_ext_installed) {
             if (songData) {
               // videoId の取得を複数のパスで試行
               const videoId = songData.playlistItemData?.videoId ||
-                           songData.navigationEndpoint?.watchEndpoint?.videoId ||
-                           songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
+                songData.navigationEndpoint?.watchEndpoint?.videoId ||
+                songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
 
               // タイトルの取得
               const title = songData.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
-                         songData.title?.runs?.[0]?.text;
+                songData.title?.runs?.[0]?.text;
 
               if (videoId && title) {
                 songs.push({
@@ -961,11 +921,11 @@ if (window.__ytm_playlist_ext_installed) {
               const songData = item.musicResponsiveListItemRenderer || item.musicTwoRowItemRenderer;
               if (songData) {
                 const videoId = songData.playlistItemData?.videoId ||
-                             songData.navigationEndpoint?.watchEndpoint?.videoId ||
-                             songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
+                  songData.navigationEndpoint?.watchEndpoint?.videoId ||
+                  songData.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
 
                 const title = songData.flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.[0]?.text ||
-                           songData.title?.runs?.[0]?.text;
+                  songData.title?.runs?.[0]?.text;
 
                 if (videoId && title) {
                   songs.push({
@@ -993,39 +953,14 @@ if (window.__ytm_playlist_ext_installed) {
       return [];
     }
   };
-
-  /* eslint-disable no-unused-vars */
-  /**
- * 再生回数の文字列を数値に変換
- * @param {string} str - "1.2M" や "500K" のような文字列
- * @returns {number} - 数値
- */
-  const parseViewCountString = (str) => {
-    if (!str) return 0;
-    const multipliers = {
-      'K': 1000,
-      'M': 1000000,
-      'B': 1000000000
-    };
-
-    const match = str.match(/([\d.]+)([KMB])?/);
-    if (!match) return 0;
-
-    const number = parseFloat(match[1]);
-    const multiplier = multipliers[match[2]] || 1;
-
-    return Math.floor(number * multiplier);
-  };
-  /* eslint-enable no-unused-vars */
-
   /**
  * YouTubeでアーティスト名とタイトルから動画を検索
  */
   const searchYouTubeVideo = async (artist, title) => {
     try {
-      const sanitizedArtist = artist.replace(/[^\w\s]/g, '');
-      const sanitizedTitle = title.replace(/[^\w\s]/g, '');
-      const query = `${sanitizedArtist} ${sanitizedTitle}`;
+      const sanitizedArtist = artist.replace(/[^\p{L}\p{N}\s]/gu, '');
+      const sanitizedTitle = title.replace(/[^\p{L}\p{N}\s]/gu, '');
+      const query = `${sanitizedArtist} ${sanitizedTitle}`.trim();
       log(`YouTube検索: "${query}"`);
 
       const searchResponse = await callYTMusicAPI('search', {
@@ -1071,7 +1006,6 @@ if (window.__ytm_playlist_ext_installed) {
       return null;
     }
   };
-  /* eslint-enable no-unused-vars */
 
   /**
  * 既存の再生リストを検索
@@ -1193,32 +1127,6 @@ if (window.__ytm_playlist_ext_installed) {
     }
   };
 
-  /* eslint-disable no-unused-vars */
-  /**
- * 再生リストを削除
- */
-  const deletePlaylist = async (playlistId) => {
-    try {
-      log(`再生リスト削除中: ${playlistId}`);
-      const response = await callYTMusicAPI('playlist/delete', {
-        playlistId: playlistId
-      });
-
-      if (response && (response.status === 'STATUS_SUCCEEDED' || response.responseContext)) {
-        log(`✓ 再生リスト削除成功: ${playlistId}`);
-        return { success: true };
-      } else {
-        throw new Error('再生リスト削除に失敗しました');
-      }
-
-    } catch (error) {
-      logError(`再生リスト削除エラー: ${error.message}`);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  };
 
   /**
  * YouTube APIでプレイリストを削除
@@ -1388,122 +1296,56 @@ if (window.__ytm_playlist_ext_installed) {
       let data = null;
       let lastErrorText = null;
 
-      // First, attempt to use OAuth Bearer token if available (preferred)
-      try {
-        const token = await getOAuthTokenFromBackground(true).catch(() => null);
-        if (token) {
-          log('OAuth token を取得しました。Data API に Bearer で送信します');
-          try {
-            const headers = {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            };
+      for (const tryOrigin of originCandidates) {
+        try {
+          const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
+          const headers = {
+            'Authorization': `SAPISIDHASH ${tryHash}`,
+            'Content-Type': 'application/json',
+            'X-Origin': tryOrigin,
+            'X-Goog-AuthUser': '0'
+          };
 
-            const oauthResp = await fetch(createUrl, {
-              method: 'POST',
-              headers: headers,
-              body: JSON.stringify(requestBody),
-              credentials: 'include'
-            });
+          log(`試行: origin=${tryOrigin} を使用してリクエスト送信`);
+          log('送信ヘッダー:', headers);
 
-            const oauthText = await oauthResp.text();
-            if (oauthResp.ok) {
-              data = JSON.parse(oauthText);
-            } else {
-              logError(`OAuth を用いたプレイリスト作成でエラー: status=${oauthResp.status} body=${oauthText}`);
-              // If auth-specific error, fallback to previous SAPISIDHASH approach
-              if (oauthResp.status === 401 || oauthResp.status === 403) {
-                log('OAuth で認証エラーが発生しました。SAPISIDHASH にフォールバックします');
-              } else {
-                // for other 4xx/5xx, throw and let fallback handle
-                lastErrorText = `status=${oauthResp.status} body=${oauthText}`;
-                throw new Error(lastErrorText);
-              }
+          const response = await fetch(createUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody),
+            credentials: 'include'
+          });
+
+          const text = await response.text();
+          if (!response.ok) {
+            lastErrorText = `status=${response.status} body=${text}`;
+            logError(`プレイリスト作成試行でエラー: origin=${tryOrigin} - ${lastErrorText}`);
+
+            // If server indicates XD3 origin mismatch, continue to next candidate
+            if (text && text.includes('Origin') && text.includes('XD3')) {
+              log('XD3 origin mismatch を検出、別のoriginで再試行します');
+              await wait(300);
+              continue;
             }
-          } catch (oauthErr) {
-            logError(`OAuth 送信例外: ${oauthErr.message}`);
+
+            // Other errors: throw to outer handler
+            throw new Error(lastErrorText);
           }
-        }
-      } catch (e) {
-        log('OAuth token 取得に失敗、SAPISIDHASH にフォールバック');
-      }
 
-      // If data not obtained by OAuth, use existing SAPISIDHASH origin-retry logic
-      if (!data) {
-        for (const tryOrigin of originCandidates) {
-          try {
-            const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
-            const headers = {
-              'Authorization': `SAPISIDHASH ${tryHash}`,
-              'Content-Type': 'application/json',
-              'X-Origin': tryOrigin,
-              'X-Goog-AuthUser': '0'
-            };
-
-            log(`試行: origin=${tryOrigin} を使用してリクエスト送信`);
-            try {
-              log('送信ヘッダー (raw): ' + JSON.stringify(headers));
-            } catch (e) {
-              log('送信ヘッダー: (非表示)');
-            }
-
-            const response = await fetch(createUrl, {
-              method: 'POST',
-              headers: headers,
-              body: JSON.stringify(requestBody),
-              credentials: 'include'
-            });
-
-            const text = await response.text();
-            if (!response.ok) {
-              lastErrorText = `status=${response.status} body=${text}`;
-              logError(`プレイリスト作成試行でエラー: origin=${tryOrigin} - ${lastErrorText}`);
-
-              // If server indicates XD3 origin mismatch, continue to next candidate
-              if (text && text.includes('Origin') && text.includes('XD3')) {
-                log('XD3 origin mismatch を検出、別のoriginで再試行します');
-                await wait(300);
-                continue;
-              }
-
-              // Other errors: throw to outer handler
-              throw new Error(lastErrorText);
-            }
-
-            data = JSON.parse(text);
-            break; // success
-          } catch (err) {
-            logError(`origin=${tryOrigin} のリクエストで例外: ${err.message}`);
-            lastErrorText = err.message;
-            // try next origin
-            await wait(200);
-            continue;
-          }
+          data = JSON.parse(text);
+          break; // success
+        } catch (err) {
+          logError(`origin=${tryOrigin} のリクエストで例外: ${err.message}`);
+          lastErrorText = err.message;
+          // try next origin
+          await wait(200);
+          continue;
         }
       }
 
       if (!data) {
         // 最後のエラーをログ
         logError(`YouTube Data API create failed for all origins. lastError=${lastErrorText}`);
-
-        // フォールバック: まずバックグラウンド経由で OAuth を使った Google API 呼び出しを試す
-        try {
-          log('フォールバック: バックグラウンド経由で Google Data API (OAuth) を呼び出します');
-          const bgResp = await callGoogleApiViaBackground(createUrl, 'POST', requestBody, true).catch(() => null);
-          if (bgResp && bgResp.success && bgResp.body) {
-            const newData = bgResp.body;
-            log('バックグラウンド経由でプレイリスト作成成功', JSON.stringify(newData, null, 2));
-            return {
-              success: true,
-              playlistId: newData.id || newData.result?.id || newData.playlistId,
-              playlistUrl: `https://www.youtube.com/playlist?list=${newData.id || newData.playlistId}`,
-              wasOverwritten: wasOverwritten,
-              method: 'youtube_data_api_via_background'
-            };
-          }
-        } catch (bgErr) {
-          logError(`バックグラウンド経由での Data API 呼び出し失敗: ${bgErr.message}`);
-        }
 
         // フォールバック: YouTube Music の内部 API を page context 経由で試行する
         try {
@@ -1646,96 +1488,48 @@ if (window.__ytm_playlist_ext_installed) {
           let added = false;
           let lastErr = null;
 
-          // First attempt with OAuth token (preferred)
-          try {
-            const token = await getOAuthTokenFromBackground(true).catch(() => null);
-            if (token) {
+          for (const tryOrigin of originCandidates) {
+            try {
+              const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
               const headers = {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Authorization': `SAPISIDHASH ${tryHash}`,
+                'Content-Type': 'application/json',
+                'X-Origin': tryOrigin,
+                'X-Goog-AuthUser': '0'
               };
 
-              log(`OAuth を使って動画追加を試行: videoId=${video.videoId}`);
-              try {
-                log('送信ヘッダー (raw): ' + JSON.stringify(headers));
-              } catch (e) {
-                log('送信ヘッダー: (非表示)');
-              }
+              log(`動画追加を試行: origin=${tryOrigin} videoId=${video.videoId}`);
+              log('送信ヘッダー:', headers);
 
-              const oauthResp = await fetch(addUrl, {
+              const response = await fetch(addUrl, {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify(requestBody),
                 credentials: 'include'
               });
 
-              const oauthText = await oauthResp.text();
-              if (oauthResp.ok) {
-                addedCount++;
-                log(`✓ OAuth による動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
-                added = true;
-              } else {
-                lastErr = `status=${oauthResp.status} body=${oauthText}`;
-                logError(`OAuth による動画追加でエラー: ${lastErr}`);
-                // If auth error, fall back to SAPISIDHASH logic below
-                if (oauthResp.status !== 401 && oauthResp.status !== 403) {
-                  throw new Error(lastErr);
+              const text = await response.text();
+              if (!response.ok) {
+                lastErr = `status=${response.status} body=${text}`;
+                logError(`動画追加でエラー: origin=${tryOrigin} - ${lastErr}`);
+                if (text && text.includes('Origin') && text.includes('XD3')) {
+                  log('XD3 origin mismatch を検出、別のoriginで再試行します');
+                  await wait(200);
+                  continue;
                 }
+                throw new Error(lastErr);
               }
-            }
-          } catch (oauthEx) {
-            logError(`OAuth 試行で例外: ${oauthEx.message}`);
-          }
 
-          // If not added by OAuth, use existing origin retries with SAPISIDHASH
-          if (!added) {
-            for (const tryOrigin of originCandidates) {
-              try {
-                const { sapisidhash: tryHash } = await computeSapisidHash(sapisid, tryOrigin);
-                const headers = {
-                  'Authorization': `SAPISIDHASH ${tryHash}`,
-                  'Content-Type': 'application/json',
-                  'X-Origin': tryOrigin,
-                  'X-Goog-AuthUser': '0'
-                };
-
-                log(`動画追加を試行: origin=${tryOrigin} videoId=${video.videoId}`);
-                try {
-                  log('送信ヘッダー (raw): ' + JSON.stringify(headers));
-                } catch (e) {
-                  log('送信ヘッダー: (非表示)');
-                }
-
-                const response = await fetch(addUrl, {
-                  method: 'POST',
-                  headers: headers,
-                  body: JSON.stringify(requestBody),
-                  credentials: 'include'
-                });
-
-                const text = await response.text();
-                if (!response.ok) {
-                  lastErr = `status=${response.status} body=${text}`;
-                  logError(`動画追加でエラー: origin=${tryOrigin} - ${lastErr}`);
-                  if (text && text.includes('Origin') && text.includes('XD3')) {
-                    log('XD3 origin mismatch を検出、別のoriginで再試行します');
-                    await wait(200);
-                    continue;
-                  }
-                  throw new Error(lastErr);
-                }
-
-                // success
-                addedCount++;
-                log(`✓ 動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
-                added = true;
-                break;
-              } catch (err) {
-                logError(`origin=${tryOrigin} の動画追加で例外: ${err.message}`);
-                lastErr = err.message;
-                await wait(150);
-                continue;
-              }
+              // success
+              addedCount++;
+              log(`✓ 動画追加成功 (${addedCount}/${foundVideos.length}): ${video.title}`);
+              added = true;
+              break;
+            } catch (err) {
+              logError(`origin=${tryOrigin} の動画追加で例外: ${err.message}`);
+              lastErr = err.message;
+              await wait(150);
+              continue;
             }
           }
 
@@ -1744,177 +1538,21 @@ if (window.__ytm_playlist_ext_installed) {
 
             // fallback: try internal API (browse/edit_playlist) via page context
             try {
-              const actions = [{
-                action: 'ACTION_ADD_VIDEO',
-                addedVideoId: video.videoId,
-                // 推奨: 重複チェックを行うオプション
-                dedupeOption: 'DEDUPE_OPTION_CHECK',
-                // マニュアルソート時の位置（UI由来のフィールド）。多くの内部リクエストに含まれるため付与する。
-                addedVideoPositionIfManualSort: 0
-              }];
+              const actions = [{ action: 'ACTION_ADD_VIDEO', addedVideoId: video.videoId }];
               log(`フォールバック: browse/edit_playlist を使用して videoId=${video.videoId} を追加`);
+              const pageResp = await callYTMusicAPI('browse/edit_playlist', {
+                playlistId: playlistId, // internal API sometimes expects VL-prefixed id
+                actions: actions
+              });
 
-              // ログ: フォールバックに渡す生のペイロードを出力
-              try {
-                log('フォールバックリクエスト body (raw): ' + JSON.stringify({ playlistId: `VL${playlistId}`, actions: actions }));
-              } catch (e) {
-                log('フォールバックリクエスト body: (非表示)');
-              }
+              log('内部API追加レスポンス:', JSON.stringify(pageResp, null, 2));
 
-              // まずバックグラウンド経由で Google の youtubei (www.googleapis.com) を OAuth で呼んでみる
-              try {
-                log('フォールバック: バックグラウンド経由で Data API の playlistItems を試します (OAuth)');
-                const addUrlBg = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&key=${apiKey}`;
-                const bgResp2 = await callGoogleApiViaBackground(addUrlBg, 'POST', requestBody, true).catch(() => null);
-                if (bgResp2 && bgResp2.success && bgResp2.body) {
-                  addedCount++;
-                  log(`✓ バックグラウンド経由で動画追加成功 (oauth): ${video.title}`);
-                  continue;
-                }
-              } catch (e) {
-                logError('バックグラウンド経由の追加に失敗: ' + e.message);
-              }
-
-              // normalize playlistId: don't double-prefix VL
-              const normalizedPlaylistId = (playlistId || '').toString().startsWith('VL') ? playlistId : `VL${playlistId}`;
-
-              // ensure actions have expected optional fields observed in UI requests
-              const enrichedActions = (actions || []).map(a => ({
-                action: a.action,
-                addedVideoId: a.addedVideoId || a.addedVideoId,
-                // include dedupe option commonly present in UI requests
-                dedupeOption: a.dedupeOption || 'DEDUPE_OPTION_CHECK',
-                // position for manual sort flows; default 0
-                addedVideoPositionIfManualSort: (typeof a.addedVideoPositionIfManualSort === 'number') ? a.addedVideoPositionIfManualSort : 0,
-                // preserve any other fields such as params or clickTracking
-                ...(a.params ? { params: a.params } : {}),
-                ...(a.clickTracking ? { clickTracking: a.clickTracking } : {})
-              }));
-
-              // Some Music UI requests include a 'params' query value; include a conservative default observed in HAR.
-              // pull params from the original requestBody if available, otherwise use a conservative default
-              // Prefer params from existing requestBody or from UI-observed defaults
-              const editParams = (typeof requestBody === 'object' && requestBody.params) ? requestBody.params : (typeof requestBody === 'object' && requestBody.request && requestBody.request.params ? requestBody.request.params : 'YAE%3D');
-
-              // Try several playlistId formats to work around strict validation in internal API
-              // Build a base id by stripping known prefixes, then try a deterministic set of candidates.
-              const playlistIdCandidates = [];
-              const rawId = (playlistId || '').toString();
-              // strip common prefixes (VL, PL)
-              const baseId = rawId.replace(/^(?:VL|PL)/, '');
-
-              // Candidate order (heuristic): prefer VL-prefixed id when original is PL-prefixed
-              // Many UI requests use VL...; if original id starts with PL, try VL+base first.
-              let candidates;
-              if (rawId && rawId.startsWith('PL') && baseId) {
-                candidates = [`VL${baseId}`, rawId, baseId, `PL${baseId}`];
+              // 成功の判定 (内部レスポンスは不安定なので緩やかに判定)
+              if (pageResp && (!pageResp.error)) {
+                addedCount++;
+                log(`✓ 内部APIフォールバックで動画追加成功: ${video.title}`);
               } else {
-                // default: try raw, base, VL+base, PL+base
-                candidates = [rawId, baseId, baseId ? `VL${baseId}` : '', baseId ? `PL${baseId}` : ''];
-              }
-
-              // push unique, non-empty candidates preserving order
-              const seen = new Set();
-              for (const c of candidates) {
-                if (!c) continue;
-                if (seen.has(c)) continue;
-                seen.add(c);
-                playlistIdCandidates.push(c);
-              }
-
-              let lastPageErr = null;
-              let pageSuccess = false;
-
-              for (const pid of playlistIdCandidates) {
-                if (!pid) continue;
-
-                // Try a couple of payload variants for each playlistId to work around strict validation
-                // include context from existing requestBody (if available) so clickTracking and other
-                // context fields from the page are preserved in the final request
-                const contextFromReq = (typeof requestBody === 'object' && requestBody.context) ? requestBody.context : undefined;
-
-                const baseVariant = {
-                  playlistId: pid,
-                  actions: enrichedActions,
-                  ...(editParams ? { params: editParams } : {}),
-                  ...(contextFromReq ? { context: contextFromReq } : {})
-                };
-
-                const payloadVariants = [
-                  baseVariant,
-                  // include a top-level dedupeOption as seen in some UI requests
-                  { ...baseVariant, dedupeOption: 'DEDUPE_OPTION_CHECK' },
-                  // try without params (some server-side handlers accept this)
-                  (() => { const v = { ...baseVariant }; delete v.params; return v; })()
-                ];
-
-                for (const variant of payloadVariants) {
-                  try {
-                    log(`内部APIフォールバックを試行: playlistId=${pid} variant=${JSON.stringify(Object.keys(variant))}`);
-                    const pageRespTry = await callYTMusicAPI('browse/edit_playlist', variant);
-
-                    log('内部API追加レスポンス (試行結果):', JSON.stringify(pageRespTry, null, 2));
-
-                    if (pageRespTry && (!pageRespTry.error)) {
-                      // Some responses indicate the item was already in the playlist (duplicate) but
-                      // the UI treats that as a non-error. Normalize that to success so the flow continues.
-                      let treatedAsSuccess = true;
-                      try {
-                        // Prefer structured detection: check for addToToastAction -> notificationActionRenderer -> responseText
-                        const actionsArr = pageRespTry.actions || [];
-                        let foundDuplicateMsg = false;
-
-                        // check top-level actions for addToToastAction structures
-                        for (const a of actionsArr) {
-                          const addTo = a.addToToastAction || (a.addToToastAction && a.addToToastAction.item) ? a.addToToastAction : null;
-                          if (addTo && addTo.item && addTo.item.notificationActionRenderer && addTo.item.notificationActionRenderer.responseText) {
-                            try {
-                              const runs = addTo.item.notificationActionRenderer.responseText.runs || [];
-                              const text = runs.map(r => r.text || '').join('');
-                              if (text.includes('すでに') || text.includes('already') || text.includes('既に')) foundDuplicateMsg = true;
-                            } catch (e) {
-                              // ignore
-                            }
-                          }
-                        }
-
-                        // Fallback: string search anywhere in response
-                        if (!foundDuplicateMsg) {
-                          const respStr = JSON.stringify(pageRespTry);
-                          if (respStr.includes('already') || respStr.includes('すでに') || respStr.includes('duplicate')) {
-                            foundDuplicateMsg = true;
-                          }
-                        }
-
-                        if (foundDuplicateMsg) treatedAsSuccess = true;
-                      } catch (e) {
-                        // ignore
-                      }
-
-                      if (treatedAsSuccess) {
-                        addedCount++;
-                        log(`✓ 内部APIフォールバックで動画追加成功 (playlistId=${pid}): ${video.title}`);
-                      }
-                      pageSuccess = true;
-                      break;
-                    } else {
-                      lastPageErr = JSON.stringify(pageRespTry);
-                      await wait(150);
-                      continue;
-                    }
-                  } catch (pe) {
-                    logError(`内部API試行で例外 (playlistId=${pid}): ${pe.message}`);
-                    lastPageErr = pe.message;
-                    await wait(150);
-                    continue;
-                  }
-                }
-
-                if (pageSuccess) break;
-              }
-
-              if (!pageSuccess) {
-                throw new Error(`内部APIでの追加がすべて失敗しました: ${lastPageErr}`);
+                throw new Error(`内部APIでの追加が失敗しました: ${JSON.stringify(pageResp)}`);
               }
 
             } catch (fallbackErr) {

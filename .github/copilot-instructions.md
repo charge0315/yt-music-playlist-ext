@@ -1,35 +1,43 @@
 # Copilot Instructions for AI Agents
 
 ## 🏗️ Big Picture & Architecture
-- This is a Chrome extension (Manifest V3) for YouTube Music playlist automation.
-- Main components:
   - `background.js`: Handles background tasks and API calls.
   - `content.js`: Runs in YouTube Music, fetches channel/song info.
   - `injected.js`: Injected for SAPISID authentication and direct API calls.
   - `popup.js`/`popup.html`: User interface for settings and playlist creation.
   - `utils.js`: Shared utility functions (retry, rate limit, error handling).
-- Data flow: User triggers playlist creation → fetches channels/songs → creates/edits playlist via YouTube Music internal API (InnerTube).
-- API endpoints: Prefer `browse/edit_playlist`, fallback to others if needed.
 
 ## 🛠️ Developer Workflows
-- **Install:** `npm install`
-- **Build:** `npm run build` (output: `dist/`)
-- **Test:** `npm test`, `npm run test:watch`, `npm run test:coverage` (Jest)
-- **Lint/Format:** `npm run lint`, `npm run lint:fix`, `npm run format`
-- **Debug:** Use Chrome DevTools:
   - Popup: Right-click icon → Inspect
   - Background: `chrome://extensions/` → Service Worker
   - Content: Inspect on YouTube Music page
-- **Extension Load:** Load unpacked from `dist/` in Chrome extensions page.
 
 ```markdown
-# `copilot-instructions.md` — AI エージェント向けの短い手引き（日本語）
+# Copilot Instructions for AI Agents
 
-## 概要（プロジェクトの大局）
-- このリポジトリは YouTube Music の内部 API (InnerTube) を使ってプレイリストを自動作成する Chrome 拡張（Manifest V3）です。
-- 主要コンポーネント:
-  - `background.js` — バックグラウンド処理、API 呼び出しの中継
-  - `content.js` — YouTube Music ページ上でのチャンネル/楽曲取得ロジック
+## 概要
+このリポジトリは YouTube Music のプレイリスト自動生成 Chrome拡張（Manifest V3）です。
+
+## 主要機能・構成
+- Chrome拡張: background.js, content.js, injected.js, popup.js, utils.js
+- API: YouTube Music 内部API (InnerTube)
+- 主要コマンド: npm install, npm run build, npm test, npm run lint
+
+## 開発・実行コマンド
+- 依存インストール: npm install
+- ビルド: npm run build
+- テスト: npm test
+- Lint/整形: npm run lint
+- デバッグ: Chrome DevTools, Service Worker
+
+## 注意点・運用ルール
+- SAPISID認証必須
+- レート制御（500ms間隔）
+- 非公式APIのためYouTube仕様変更に注意
+- テストはJest
+
+---
+このテンプレートは自動生成です。プロジェクト固有の注意点はREADMEも参照してください。
   - `injected.js` — ページコンテキストへ注入し SAPISID 認証や直接 API 呼び出しを行う
   - `popup.html` / `popup.js` — ユーザー設定と操作トリガー（ポップアップ UI）
   - `utils.js` — リトライ、レート制御、汎用ユーティリティ

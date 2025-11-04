@@ -1,0 +1,49 @@
+# CODEOWNERS
+# This file defines individuals or teams responsible for code in this repository.
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+# Unless a later match takes precedence, @charg will be requested for review
+* @charg
+
+# Chrome Extension Manifest and permissions
+manifest.json @charg
+dist/manifest.json @charg
+
+# Background service worker
+background.js @charg
+
+# Content scripts for page interaction
+content.js @charg
+content_scripts/ @charg
+
+# Injected scripts (InnerTube API access)
+injected.js @charg
+
+# Popup UI and styles
+popup.html @charg
+popup.js @charg
+popup.css @charg
+
+# Extension icons and assets
+icons/ @charg
+dist/icons/ @charg
+
+# Build and distribution
+dist/ @charg
+
+# Documentation
+*.md @charg
+
+# Configuration files
+*.json @charg
+*.yml @charg
+*.yaml @charg
+
+# Testing
+tests/ @charg
+*.test.js @charg
+*.spec.js @charg
+
+# GitHub Actions workflows
+/.github/workflows/ @charg

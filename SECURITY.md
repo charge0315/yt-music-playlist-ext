@@ -1,107 +1,175 @@
-# セキュリティポリシー
+# Security Policy
 
-## 🛡️ セキュリティについて
+## Supported Versions
 
-この拡張機能は以下のセキュリティ原則に従って開発されています：
+We actively support the following versions with security updates:
 
-- **最小権限の原則**: 必要最小限の権限のみを要求
-- **ローカル処理**: 可能な限りローカルで処理を完結
-- **公式API使用**: YouTube の公開API を使用
-- **データ保護**: ユーザーデータの外部送信なし
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.x.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
-## 🔒 プライバシー
+## Reporting a Vulnerability
 
-- YouTube Music の認証情報は拡張機能内でのみ使用
-- プレイリスト作成以外の目的でデータを使用しない
-- ユーザーの楽曲データを外部サーバーに送信しない
+We take the security of this project seriously. If you discover a security vulnerability, please follow these steps:
 
-## ⚠️ 脆弱性報告
+### Do NOT
 
-セキュリティ上の問題を発見した場合：
+- Open a public GitHub issue for security vulnerabilities
+- Disclose the vulnerability publicly before it has been addressed
 
-1. [GitHub Security Advisory](https://github.com/charge0315/yt-music-playlist-ext/security/advisories) で報告
-2. または Issues で `security` ラベルを付けて報告
+### Do
 
-以下の情報を含めてください：
-- 問題の詳細
-- 再現手順
-- 影響範囲
-- 修正案（あれば）
+1. **Email the maintainer** at security@example.com with:
+   - A description of the vulnerability
+   - Steps to reproduce the issue
+   - Potential impact
+   - Any suggested fixes (optional)
 
-## 📋 対応バージョン
+2. **Wait for acknowledgment** - We aim to respond within 48 hours
 
-| Version | Support |
-|---------|---------|
-| 1.0.x   | ✅ |
+3. **Coordinate disclosure** - We will work with you to understand and address the issue
 
-迅速に対応いたします。
+### What to Expect
 
-### 対応プロセス
+- **Acknowledgment**: Within 48 hours
+- **Initial Assessment**: Within 1 week
+- **Status Updates**: Regular updates on the progress
+- **Resolution**: Depends on severity and complexity
+- **Credit**: We will credit you in the security advisory (unless you prefer to remain anonymous)
 
-1. **確認**: 24時間以内に受領確認
-2. **評価**: 48時間以内に脆弱性を評価
-3. **修正**: 重大度に応じて修正を開発
-   - Critical: 1週間以内
-   - High: 2週間以内
-   - Medium: 1ヶ月以内
-   - Low: 次回リリース
-4. **公開**: 修正版リリース後、詳細を公開
+## Security Best Practices
 
-## セキュリティのベストプラクティス
+### For Contributors
 
-### ユーザー向け
+- Never commit sensitive data (API keys, passwords, tokens, OAuth credentials)
+- Use environment variables for configuration
+- Follow secure coding practices
+- Keep dependencies up to date
+- Run security audits regularly:
+  ```bash
+  npm audit
+  npm audit fix
+  ```
 
-1. **公式ソースからのみインストール**
-   - Chrome Web Store または公式 GitHub リリース
+### For Users
 
-2. **定期的な更新**
-   - 最新バージョンを使用してください
+- Keep the extension updated to the latest version
+- Review extension permissions before installation
+- Use strong, unique passwords for YouTube accounts
+- Protect your Google OAuth credentials
+- Be cautious about granting extension permissions
+- Review chrome extension policies regularly
 
-3. **権限の確認**
-   - 拡張機能が要求する権限を確認
+## Known Security Considerations
 
-### 開発者向け
+### Chrome Extension Permissions
 
-1. **依存関係の監査**
-```bash
-npm audit
-npm audit fix
+This extension requires specific permissions for functionality:
+
+**Critical Permissions:**
+- `activeTab` - Access current tab for content script execution
+- `storage` - Store user preferences and cached data
+- `scripting` - Inject and execute scripts in YouTube pages
+- `cookies` - Access authentication cookies for API requests
+- `identity` - OAuth 2.0 authentication with Google
+
+**Host Permissions:**
+- `https://music.youtube.com/*` - YouTube Music service
+- `https://www.youtube.com/*` - YouTube main service
+- `https://www.googleapis.com/*` - Google API access
+
+**Risk Mitigation:**
+- Permissions are limited to necessary scopes only
+- No excessive host permissions requested
+- All scripts run with Content Security Policy restrictions
+- User consent is required for sensitive operations
+
+### YouTube Music InnerTube API Authentication
+
+This extension accesses YouTube Music through the InnerTube API:
+
+- **SAPISID Authentication**: Uses HTTP-only cookies for secure authentication
+- **No OAuth Client Secrets**: Client ID only is used (safe to expose)
+- **Session Management**: Relies on browser session cookies
+- **API Key**: API key is not required for InnerTube access
+
+**Security Measures:**
+- Credentials are never stored in extension storage
+- All API requests use HTTPS
+- Requests include proper User-Agent headers
+- API responses are validated before processing
+
+### OAuth 2.0 Security (YouTube Data API v3)
+
+When using YouTube Data API v3 for extended functionality:
+
+- **Redirect URIs**: Must be explicitly registered in Google Console
+- **State Parameter**: Used to prevent CSRF attacks
+- **Token Storage**: Access tokens are stored in chrome.storage
+- **Token Refresh**: Refresh tokens are securely managed
+- **Client ID**: Keep client ID configuration in manifest.json (non-sensitive)
+
+**Token Security:**
+- Never hardcode OAuth client secrets in code
+- Store tokens using Chrome's secure storage
+- Implement token refresh mechanisms
+- Clear tokens on logout or permission revocation
+
+### Content Security Policy
+
+The extension enforces strict CSP:
+```json
+"content_security_policy": {
+  "extension_pages": "script-src 'self'; object-src 'self'"
+}
 ```
 
-2. **安全なコーディング**
-   - XSS 対策: 入力値のサニタイゼーション
-   - CSRF 対策: トークン検証
-   - 最小権限の原則に従う
+- Only allows scripts from the extension itself
+- Prevents inline script execution
+- Prevents external script injection
+- Disallows object/embed resources
 
-3. **機密情報の保護**
-   - API キーやトークンをコードにハードコードしない
-   - `.gitignore` で機密ファイルを除外
+### Data Privacy
 
-## 既知の制限事項
+- No user data is sent to third-party servers (except Google APIs)
+- Playlists are created directly to user's YouTube account
+- Cached data is stored locally in chrome.storage
+- All data transmission uses HTTPS
 
-1. **YouTube Music API**
-   - 非公式 API を使用しているため、YouTube Music の変更により動作しなくなる可能性があります
+### Development Security
 
-2. **権限**
-   - `https://music.youtube.com/*` へのアクセス権限が必要です
+- Use separate API credentials for development and production
+- Never commit credentials to version control
+- Review manifest.json changes carefully
+- Test permissions thoroughly before release
+- Keep manifest version updated
 
-3. **Cookie**
-   - YouTube Music へのログイン状態が必要です
+## Security Updates
 
-## セキュリティ関連の更新
+Security updates will be released as soon as possible after a vulnerability is confirmed. Users will be notified through:
 
-セキュリティアップデートは優先的にリリースされます:
+- GitHub Security Advisories
+- Chrome Web Store release notes
+- Extension update notifications
+- Email notifications (for critical issues)
 
-- **Critical**: 即座にリリース
-- **High**: 1週間以内
-- **Medium**: 次回定期リリース
+## Responsible Disclosure
 
-## 連絡先
+We practice responsible disclosure:
+- Vulnerabilities are fixed before public disclosure
+- We provide credit to security researchers
+- We coordinate with affected parties
+- We release security advisories when appropriate
 
-セキュリティに関する質問や懸念事項:
-- GitHub Issues (一般的な質問)
-- GitHub Security Advisory (脆弱性報告)
+## Contact
 
-## 謝辞
+For security concerns, please contact:
+- Email: security@example.com
+- GitHub: @charg
 
-セキュリティ脆弱性を責任を持って報告してくださった方々に感謝します。
+For general questions, please use GitHub issues instead.
+
+---
+
+Thank you for helping keep this project secure!

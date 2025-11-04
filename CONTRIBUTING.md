@@ -1,162 +1,161 @@
-# コントリビューションガイド
+# Contributing to this Project
 
-YouTube Music Playlist Extension への貢献をありがとうございます！
+Thank you for considering contributing to this project! We welcome contributions from the community.
 
-## 🐛 バグ報告
+## Code of Conduct
 
-[Issues](https://github.com/charge0315/yt-music-playlist-ext/issues) で以下の情報を含めて報告してください：
+By participating in this project, you agree to abide by our Code of Conduct. Please be respectful and constructive in all interactions.
 
-- 問題の詳細な説明
-- 再現手順
-- 期待される動作と実際の動作
-- 環境情報（OS、ブラウザ）
-- スクリーンショット（該当する場合）
+## How to Contribute
 
-## 💡 機能要求
+### Reporting Bugs
 
-新機能のアイデアがあれば、Issueで議論しましょう。
+If you find a bug, please create an issue with:
 
-## 🔧 開発貢献
+- A clear, descriptive title
+- Steps to reproduce the issue
+- Expected behavior
+- Actual behavior
+- Screenshots (if applicable)
+- Your environment (OS, Node version, etc.)
 
-1. リポジトリをフォーク
-2. 機能ブランチを作成 (`feature/your-feature-name`)
-3. 変更をコミット
-4. テストを追加/更新
-5. プルリクエストを作成
+### Suggesting Features
 
-### 開発環境
+We welcome feature suggestions! Please create an issue with:
 
-```bash
-npm install
-npm run build
-npm test
-npm run lint
-```
+- A clear description of the feature
+- Why this feature would be useful
+- Any relevant examples or mockups
 
-詳細は [DEVELOPMENT.md](DEVELOPMENT.md) を参照してください。
+### Pull Requests
 
-## 📝 ライセンス
+1. **Fork the repository** and create your branch from `main`:
+   ```bash
+   git checkout -b feature/my-new-feature
+   ```
 
-貢献したコードは MIT ライセンスの下で公開されます。
+2. **Make your changes**:
+   - Write clean, maintainable code
+   - Follow the existing code style
+   - Add tests for new features
+   - Update documentation as needed
 
-### 機能提案
+3. **Test your changes**:
+   ```bash
+   npm run test
+   npm run lint
+   ```
 
-新機能の提案は歓迎します! Issueで以下を説明してください:
+4. **Commit your changes**:
+   - Use clear, descriptive commit messages
+   - Follow conventional commits format (e.g., `feat:`, `fix:`, `docs:`)
+   ```bash
+   git commit -m "feat: add new feature description"
+   ```
 
-- **機能の説明**
-- **なぜその機能が必要か**
-- **可能であれば、実装案**
+5. **Push to your fork**:
+   ```bash
+   git push origin feature/my-new-feature
+   ```
 
-### プルリクエスト
+6. **Create a Pull Request**:
+   - Provide a clear description of the changes
+   - Reference any related issues
+   - Ensure CI checks pass
 
-1. **フォーク**してクローン
-```bash
-git clone https://github.com/YOUR_USERNAME/yt-music-playlist-ext.git
-cd yt-music-playlist-ext
-```
+## Development Setup
 
-2. **ブランチを作成**
-```bash
-git checkout -b feature/your-feature-name
-```
+### Prerequisites
 
-3. **変更を加える**
-   - コードスタイルガイドに従う
-   - テストを追加/更新する
-   - ドキュメントを更新する
+- Node.js 18.0.0 or higher
+- npm
+- MongoDB (if applicable)
 
-4. **テストを実行**
-```bash
-npm test
-npm run lint
-```
-
-5. **コミット**
-```bash
-git commit -m "feat: add new feature"
-```
-
-コミットメッセージは[Conventional Commits](https://www.conventionalcommits.org/)に従ってください:
-- `feat:` 新機能
-- `fix:` バグ修正
-- `docs:` ドキュメントのみの変更
-- `style:` コードの動作に影響しない変更（フォーマットなど）
-- `refactor:` リファクタリング
-- `test:` テストの追加や修正
-- `chore:` ビルドプロセスや補助ツールの変更
-
-6. **プッシュ**
-```bash
-git push origin feature/your-feature-name
-```
-
-7. **プルリクエストを作成**
-
-## 開発環境のセットアップ
+### Installation
 
 ```bash
-# 依存関係のインストール
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/PROJECT_NAME.git
+cd PROJECT_NAME
+
+# Install dependencies
 npm install
 
-# Lintの実行
-npm run lint
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
 
-# テストの実行
-npm test
-
-# ウォッチモードでテスト
-npm run test:watch
+# Start development server
+npm run dev
 ```
 
-## コードスタイル
+## Code Style
 
-- **ESLint**と**Prettier**を使用
-- インデント: スペース2つ
-- セミコロン: 必須
-- クォート: シングルクォート推奨
+- Use TypeScript for type safety
+- Follow ESLint and Prettier configurations
+- Write meaningful variable and function names
+- Add comments for complex logic
+- Keep functions small and focused
 
-自動フォーマット:
-```bash
-npm run format
-```
+## Testing
 
-## テスト
-
-- 新機能には必ずテストを追加
-- バグ修正には回帰テストを追加
-- テストカバレッジ80%以上を目指す
+- Write tests for new features
+- Ensure all tests pass before submitting PR
+- Aim for good test coverage
 
 ```bash
-# カバレッジ付きテスト
+# Run tests
+npm run test
+
+# Run tests with coverage
 npm run test:coverage
 ```
 
-## ディレクトリ構造
+## Commit Message Guidelines
+
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style changes (formatting, etc.)
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+Examples:
+```
+feat: add user authentication
+fix: resolve memory leak in cache system
+docs: update API documentation
+```
+
+## Project Structure
+
+Please maintain the existing project structure:
 
 ```
-src/
-├── background/   # バックグラウンドスクリプト
-├── content/      # コンテンツスクリプト
-├── popup/        # ポップアップUI
-└── utils/        # ユーティリティ関数
-tests/            # テストファイル
-docs/             # ドキュメント
+project-name/
+├── src/
+│   ├── components/  # Reusable components
+│   ├── services/    # Business logic
+│   ├── utils/       # Helper functions
+│   └── types/       # TypeScript types
+├── tests/           # Test files
+└── docs/            # Documentation
 ```
 
-## リリースプロセス
+## Questions?
 
-メンテナーのみ:
+If you have questions, feel free to:
+- Open an issue
+- Reach out to the maintainers
+- Check existing documentation
 
-1. バージョン番号を更新（`package.json`, `manifest.json`）
-2. `CHANGELOG.md`を更新
-3. タグを作成: `git tag v1.x.x`
-4. プッシュ: `git push --tags`
+## License
 
-## 質問がある場合
+By contributing, you agree that your contributions will be licensed under the same license as the project (see LICENSE file).
 
-- Issueで質問を作成
-- [Discussions](https://github.com/charge0315/yt-music-playlist-ext/discussions)で議論
+---
 
-## ライセンス
-
-このプロジェクトに貢献することで、あなたの貢献がMITライセンスの下でライセンスされることに同意したものとみなされます。
+Thank you for contributing! Your efforts help make this project better for everyone.
